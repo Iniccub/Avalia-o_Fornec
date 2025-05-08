@@ -284,7 +284,7 @@ if fornecedor and unidade and periodo:
                 #mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             #)
 
-            st.success('Respostas processadas com sucesso! Você pode baixar o arquivo acima')
+            st.success('Respostas processadas com sucesso!')
     else:
         st.warning('Por favor, selecione a unidade, o período e o fornecedor para iniciar a avaliação.')
 
