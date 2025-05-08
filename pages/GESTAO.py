@@ -77,7 +77,7 @@ with tab2:
         perguntas_fornecedor = perguntas_por_fornecedor.get(fornecedor_selecionado, {})
         
         # Exibir perguntas por categoria
-        for categoria in ['Atividades Operacionais', 'Segurança', 'Qualidade']:
+        for categoria in ['Atividades Operacionais', 'Segurança', 'Documentação', 'Qualidade']:
             st.write(f"### {categoria}")
             perguntas = perguntas_fornecedor.get(categoria, [])
             
