@@ -260,7 +260,7 @@ if fornecedor and unidade and periodo:
             nome_arquivo = f'{nome_fornecedor}_{nome_periodo}_{unidade}_SUP.xlsx'
 
             # Define o caminho completo do arquivo
-            caminho_pasta = r'Z:\Administrativo e Suprimentos\GESTÃO DE FORNECEDORES\RESPOSTAS AVALIAÇÕES DE FORNECEDORES'
+            caminho_pasta = r'\\10.10.0.17\Dados\Administrativo e Suprimentos\GESTÃO DE FORNECEDORES\RESPOSTAS AVALIAÇÕES DE FORNECEDORES'
             caminho_completo = os.path.join(caminho_pasta, nome_arquivo)
 
             try:
