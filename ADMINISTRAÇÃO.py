@@ -272,17 +272,6 @@ if fornecedor and unidade and periodo:
             nome_periodo = periodo.replace('/', '-')
             nome_unidade = unidade
             nome_arquivo = f'{nome_fornecedor}_{nome_periodo}_{nome_unidade}.xlsx'
-            
-            # Define o caminho completo do arquivo
-            #caminho_pasta = r'https://csasic-my.sharepoint.com/:f:/g/personal/felipe_redelius_com_br/EiHC9Z4q_0ZIipH__DWcGlIB47Mj0b5BhAiNkLJ42rDHyA?e=f9i9hi'
-            #caminho_completo = os.path.join(caminho_pasta, nome_arquivo)
-
-            #try:
-                # Salvar o DataFrame diretamente no arquivo Excel
-                #df_respostas.to_excel(caminho_completo, index=False)
-                #st.success(f'Arquivo salvo com sucesso em: {caminho_completo}')
-            #except Exception as e:
-                #st.error(f'Erro ao salvar o arquivo: {str(e)}. Verifique se você tem permissão de acesso à pasta de rede.')
 
             # Salva o DataFrame em um objeto BytesIO
             output = BytesIO()
@@ -290,15 +279,15 @@ if fornecedor and unidade and periodo:
                 df_respostas.to_excel(writer, index=False)
             output.seek(0)
 
-            #Cria um botão de download no Streamlit
+            # Cria um botão de download no Streamlit que permite escolher onde salvar
             st.download_button(
-                label='Clique aqui para baixar o arquivo Excel com as respostas',
+                label='Clique aqui para salvar o arquivo Excel com as respostas',
                 data=output,
                 file_name=nome_arquivo,
                 mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
 
-            st.success('Respostas processadas com sucesso!')
+            st.success('Respostas processadas com sucesso! Clique no botão acima para salvar o arquivo.')
     else:
         st.warning('Por favor, selecione a unidade, o período e o fornecedor para iniciar a avaliação.')
 
