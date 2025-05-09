@@ -288,6 +288,7 @@ if fornecedor and unidade and periodo:
             )
 
             st.success('Respostas processadas com sucesso! Clique no botão acima para salvar o arquivo.')
+            st.success(r'Caminho da pasta onde salvar o arquivo. Copie o endereço a partir daqui: \\\10.10.0.17\Dados\Administrativo e Suprimentos\GESTÃO DE FORNECEDORES\RESPOSTAS AVALIAÇÕES DE FORNECEDORES')
     else:
         st.warning('Por favor, selecione a unidade, o período e o fornecedor para iniciar a avaliação.')
 
