@@ -56,7 +56,21 @@ with tab1:
         with st.form(key='edit_fornecedor_form'):
             st.subheader(f'Editar Fornecedor: {st.session_state.editing_fornecedor}')
             novo_nome = st.text_input('Novo nome do fornecedor', value=st.session_state.editing_fornecedor)
-            novas_unidades = st.multiselect('Unidades', options=unidades, default=st.session_state.editing_unidades)
+            # Modificar esta linha
+            # Filtrar valores default para garantir que existam nas opções
+            # Verificar se editing_unidades existe no session_state
+            valores_default_validos = []
+            if 'editing_unidades' in st.session_state:
+                valores_default_validos = [
+                    unidade for unidade in st.session_state.editing_unidades 
+                    if unidade in unidades
+                ]
+            
+            novas_unidades = st.multiselect(
+                'Unidades', 
+                options=unidades, 
+                default=valores_default_validos
+            )
             
             col1, col2 = st.columns(2)
             with col1:
