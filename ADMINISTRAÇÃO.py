@@ -9,11 +9,18 @@ import sys
 
 # Função para importar módulos dinamicamente
 def import_module(module_name, file_path):
-    spec = importlib.util.spec_from_file_location(module_name, file_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
+    try:
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        if spec is None:
+            st.error(f"Erro ao importar {module_name}: Arquivo não encontrado")
+            return None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        return module
+    except Exception as e:
+        st.error(f"Erro ao importar {module_name}: {str(e)}")
+        return None
 
 # Importar módulos locais
 fornecedores_module = import_module('fornecedores_por_unidade', 'fornecedores_por_unidade.py')
@@ -62,6 +69,11 @@ CAMINHO_FORNECEDORES = 'fornecedores_por_unidade.py'
 
 def salvar_fornecedores(fornecedor, unidades_selecionadas):
     try:
+        # Criar backup do arquivo atual
+        if os.path.exists(CAMINHO_FORNECEDORES):
+            backup_path = f"{CAMINHO_FORNECEDORES}.bak"
+            os.replace(CAMINHO_FORNECEDORES, backup_path)
+        
         # Tentar carregar o dicionário existente
         with open(CAMINHO_FORNECEDORES, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -92,20 +104,33 @@ def salvar_fornecedores(fornecedor, unidades_selecionadas):
 @st.dialog("Cadastrar Novo Fornecedor", width="large")
 def cadastrar_fornecedor():
     st.subheader("Cadastro de Novo Fornecedor")
-    novo_fornecedor = st.text_input('Nome do fornecedor')
-    unidades_selecionadas = st.multiselect("Selecione as unidades", options=unidades)
-
-    if st.button("Salvar"):
-        novo_fornecedor = novo_fornecedor.strip()
-        if novo_fornecedor and unidades_selecionadas:
-            if novo_fornecedor not in fornecedores_por_unidade:
-                # Salvar o novo fornecedor com suas unidades
-                salvar_fornecedores(novo_fornecedor, unidades_selecionadas)
-                st.toast(f'Fornecedor "{novo_fornecedor}" adicionado com sucesso!', icon='✅')
+    
+    with st.form("formulario_cadastro_fornecedor"):
+        novo_fornecedor = st.text_input('Nome do fornecedor')
+        unidades_selecionadas = st.multiselect("Selecione as unidades", options=unidades)
+        
+        submitted = st.form_submit_button("Salvar")
+        
+        if submitted:
+            novo_fornecedor = novo_fornecedor.strip()
+            # Adicionar validações extras
+            if len(novo_fornecedor) < 3:
+                st.warning("O nome do fornecedor deve ter pelo menos 3 caracteres")
+                return
+            if not unidades_selecionadas:
+                st.warning("Selecione pelo menos uma unidade")
+                return
+            
+            # Resto do código permanece igual
+            if novo_fornecedor and unidades_selecionadas:
+                if novo_fornecedor not in fornecedores_por_unidade:
+                    # Salvar o novo fornecedor com suas unidades
+                    salvar_fornecedores(novo_fornecedor, unidades_selecionadas)
+                    st.toast(f'Fornecedor "{novo_fornecedor}" adicionado com sucesso!', icon='✅')
+                else:
+                    st.warning('Fornecedor já existe na lista')
             else:
-                st.warning('Fornecedor já existe na lista')
-        else:
-            st.warning('Por favor, preencha o nome do fornecedor e selecione pelo menos uma unidade')
+                st.warning('Por favor, preencha o nome do fornecedor e selecione pelo menos uma unidade')
 
 with st.sidebar:
     st.image("CSA.png", width=150)
@@ -158,40 +183,46 @@ else:
 @st.dialog("Cadastrar Nova Pergunta", width="large")
 def cadastrar_pergunta():
     st.subheader("Cadastro de Nova Pergunta")
-    # Obter lista de fornecedores das unidades
-    todos_fornecedores = list(fornecedores_por_unidade.keys())
-    fornecedor = st.selectbox("Selecione o fornecedor", options=todos_fornecedores)
-    categoria = st.selectbox('Categoria',('Atividades Operacionais', 'Segurança', 'Qualidade'))
-    nova_pergunta = st.text_area("Nova pergunta", placeholder="Digite a nova pergunta aqui")
+    
+    # Criar um formulário
+    with st.form("formulario_cadastro_pergunta"):
+        # Obter lista de fornecedores das unidades
+        todos_fornecedores = list(fornecedores_por_unidade.keys())
+        fornecedor = st.selectbox("Selecione o fornecedor", options=todos_fornecedores)
+        categoria = st.selectbox('Categoria',('Atividades Operacionais', 'Segurança', 'Qualidade'))
+        nova_pergunta = st.text_area("Nova pergunta", placeholder="Digite a nova pergunta aqui")
+        
+        # Botão de submit do formulário
+        submitted = st.form_submit_button("Salvar")
+        
+        if submitted:
+            if fornecedor and categoria and nova_pergunta:
+                # Carregar perguntas existentes
+                from perguntas_por_fornecedor import perguntas_por_fornecedor
 
-    if st.button("Salvar"):
-        if fornecedor and categoria and nova_pergunta:
-            # Carregar perguntas existentes
-            from perguntas_por_fornecedor import perguntas_por_fornecedor
+                # Adicionar nova pergunta
+                if fornecedor not in perguntas_por_fornecedor:
+                    perguntas_por_fornecedor[fornecedor] = {}
+                if categoria not in perguntas_por_fornecedor[fornecedor]:
+                    perguntas_por_fornecedor[fornecedor][categoria] = []
+                perguntas_por_fornecedor[fornecedor][categoria].append(nova_pergunta)
 
-            # Adicionar nova pergunta
-            if fornecedor not in perguntas_por_fornecedor:
-                perguntas_por_fornecedor[fornecedor] = {}
-            if categoria not in perguntas_por_fornecedor[fornecedor]:
-                perguntas_por_fornecedor[fornecedor][categoria] = []
-            perguntas_por_fornecedor[fornecedor][categoria].append(nova_pergunta)
-
-            # Salvar de volta no arquivo
-            with open('perguntas_por_fornecedor.py', 'w', encoding='utf-8') as f:
-                f.write('perguntas_por_fornecedor = {\n')
-                for forn, cats in perguntas_por_fornecedor.items():
-                    f.write(f"    '{forn}': {{\n")
-                    for cat, perguntas in cats.items():
-                        f.write(f"        '{cat}': [\n")
-                        for pergunta in perguntas:
-                            f.write(f"            '{pergunta}',\n")
-                        f.write("        ],\n")
-                    f.write("    },\n")
-                f.write('}\n')
-            
-            st.success("Pergunta adicionada com sucesso!")
-        else:
-            st.warning("Por favor, preencha todos os campos.")
+                # Salvar de volta no arquivo
+                with open('perguntas_por_fornecedor.py', 'w', encoding='utf-8') as f:
+                    f.write('perguntas_por_fornecedor = {\n')
+                    for forn, cats in perguntas_por_fornecedor.items():
+                        f.write(f"    '{forn}': {{\n")
+                        for cat, perguntas in cats.items():
+                            f.write(f"        '{cat}': [\n")
+                            for pergunta in perguntas:
+                                f.write(f"            '{pergunta}',\n")
+                            f.write("        ],\n")
+                        f.write("    },\n")
+                    f.write('}\n')
+                
+                st.success("Pergunta adicionada com sucesso!")
+            else:
+                st.warning("Por favor, preencha todos os campos.")
 
 #if st.sidebar.button("Cadastrar nova pergunta"):
     #cadastrar_pergunta()
@@ -253,42 +284,46 @@ if fornecedor and unidade and periodo:
     )
 
     if st.sidebar.button('Salvar pesquisa'):
-        # Verifica se todas as perguntas foram respondidas
-        if None in respostas:
-            st.warning('Por favor, responda todas as perguntas antes de salvar.')
-        else:
-            # Cria DataFrame com as respostas
-            df_respostas = pd.DataFrame({
-                'Unidade': unidade,
-                'Período': meses_raw[meses.index(periodo)],
-                'Fornecedor': fornecedor,
-                'categorias': categorias,
-                'Pergunta': perguntas,
-                'Resposta': respostas
-            })
-
-            # Formata o nome do arquivo com base no fornecedor e período
-            nome_fornecedor = fornecedor.replace(' ', '_')
-            nome_periodo = periodo.replace('/', '-')
-            nome_unidade = unidade
-            nome_arquivo = f'{nome_fornecedor}_{nome_periodo}_{nome_unidade}.xlsx'
-
-            # Salva o DataFrame em um objeto BytesIO
-            output = BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                df_respostas.to_excel(writer, index=False)
-            output.seek(0)
-
-            # Cria um botão de download no Streamlit que permite escolher onde salvar
-            st.download_button(
-                label='Clique aqui para salvar o arquivo Excel com as respostas',
-                data=output,
-                file_name=nome_arquivo,
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-
-            st.success('Respostas processadas com sucesso! Clique no botão acima para salvar o arquivo.')
-            st.success(r'Caminho da pasta onde salvar o arquivo. Copie o endereço a partir daqui: \\\10.10.0.17\Dados\Administrativo e Suprimentos\GESTÃO DE FORNECEDORES\RESPOSTAS AVALIAÇÕES DE FORNECEDORES')
+        try:
+            if None in respostas:
+                st.warning('Por favor, responda todas as perguntas antes de salvar.')
+            else:
+                # Criar DataFrame com as respostas
+                df_respostas = pd.DataFrame({
+                    'Unidade': unidade,
+                    'Período': meses_raw[meses.index(periodo)],
+                    'Fornecedor': fornecedor,
+                    'categorias': categorias,
+                    'Pergunta': perguntas,
+                    'Resposta': respostas,
+                    'Data_Avaliacao': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
+                })
+                
+                # Formatar nome do arquivo
+                nome_fornecedor = "".join(x for x in fornecedor.replace(' ', '_') if x.isalnum() or x in ['_', '-'])
+                nome_periodo = periodo.replace('/', '-')
+                nome_unidade = "".join(x for x in unidade if x.isalnum() or x in ['_', '-'])
+                nome_arquivo = f'{nome_fornecedor}_{nome_periodo}_{nome_unidade}.xlsx'
+                
+                # Resto do código permanece igual
+                # Salva o DataFrame em um objeto BytesIO
+                output = BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    df_respostas.to_excel(writer, index=False)
+                output.seek(0)
+                
+                # Cria um botão de download no Streamlit que permite escolher onde salvar
+                st.download_button(
+                    label='Clique aqui para salvar o arquivo Excel com as respostas',
+                    data=output,
+                    file_name=nome_arquivo,
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+                
+                st.success('Respostas processadas com sucesso! Clique no botão acima para salvar o arquivo.')
+                st.success(r'Caminho da pasta onde salvar o arquivo. Copie o endereço a partir daqui: \\\10.10.0.17\Dados\Administrativo e Suprimentos\GESTÃO DE FORNECEDORES\RESPOSTAS AVALIAÇÕES DE FORNECEDORES')
+        except Exception as e:
+            st.error(f"Erro ao salvar arquivo: {str(e)}")
     else:
         st.warning('Por favor, selecione a unidade, o período e o fornecedor para iniciar a avaliação.')
 
@@ -314,3 +349,10 @@ st.sidebar.markdown("""
         © 2025 FP&A e Orçamento - Rede Lius. Todos os direitos reservados.
     </div>
     """, unsafe_allow_html=True)
+
+# Verificar existência dos arquivos necessários
+required_files = ['fornecedores_por_unidade.py', 'unidades.py', 'perguntas_por_fornecedor.py']
+for file in required_files:
+    if not os.path.exists(file):
+        st.error(f"Arquivo {file} não encontrado. Por favor, verifique se todos os arquivos necessários estão presentes.")
+        st.stop()
