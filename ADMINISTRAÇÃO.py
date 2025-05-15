@@ -255,22 +255,28 @@ if fornecedor and unidade and periodo:
 
     with tab1:
         perguntas_tab1 = perguntas_fornecedor.get('Atividades Operacionais', [])
-        for pergunta in perguntas_tab1:
-            resposta = st.selectbox(pergunta, options=opcoes, index=None, placeholder='Selecione uma opção', key=pergunta)
+        for i, pergunta in enumerate(perguntas_tab1):
+            resposta = st.selectbox(pergunta, options=opcoes, index=None, 
+                                  placeholder='Selecione uma opção', 
+                                  key=f'op_{i}_{pergunta}')
             respostas.append(resposta)
             perguntas.append(pergunta)
 
     with tab2:
         perguntas_tab2 = perguntas_fornecedor.get('Segurança', [])
-        for pergunta in perguntas_tab2:
-            resposta = st.selectbox(pergunta, options=opcoes, index=None, placeholder='Selecione uma opção', key=pergunta)
+        for i, pergunta in enumerate(perguntas_tab2):
+            resposta = st.selectbox(pergunta, options=opcoes, index=None, 
+                                  placeholder='Selecione uma opção', 
+                                  key=f'seg_{i}_{pergunta}')
             respostas.append(resposta)
             perguntas.append(pergunta)
 
     with tab3:
         perguntas_tab3 = perguntas_fornecedor.get('Qualidade', [])
-        for pergunta in perguntas_tab3:
-            resposta = st.selectbox(pergunta, options=opcoes, index=None, placeholder='Selecione uma opção', key=pergunta)
+        for i, pergunta in enumerate(perguntas_tab3):
+            resposta = st.selectbox(pergunta, options=opcoes, index=None, 
+                                  placeholder='Selecione uma opção', 
+                                  key=f'qual_{i}_{pergunta}')
             respostas.append(resposta)
             perguntas.append(pergunta)
 
