@@ -269,12 +269,35 @@ perguntas_por_fornecedor = {
             '4 - CND e CRT, relativos à Regularidade Fiscal e Trabalhista, estão atualizados?',
         ],
     },
-    'PADARIA PÃO FRANCES': {
+    'PHP SERVICE EIRELI': {
         'Atividades Operacionais': [
-            '1 - fivbnbvrvbyhvbybvyrbvybvyrbvyrbvyrbvyr',
+            '1 - O quantitativo (quadro efetivo) de funcionários da contratada está conforme especificação e acordado em contrato?',
+            '2 - Os funcionários cumprem a escala de serviço, observando pontualmente os horários de entrada e saída, sendo assíduos e pontuais ao trabalho?',
+            '3 - Na ocorrência de faltas, é providenciada pela contratada a reposição do funcionário no período previsto no contrato?',
+            '4 - A empresa fornece o ponto eletrônico e o mantem em pleno funcionamento, registrando e apurando os horários registrados dos respectivos funcionários?',
+            '5 - A SIC é  informada previamente das eventuais substituições dos funcionários da contratada?',
+            '6 - O preposto da contratada atua de maneira presente, efetiva, orientando e zelando pelos seus funcionários?',
         ],
         'Segurança': [
-            '1 - iunvvubvubvuyrhbvyNDIUVNFEUVNBUVBERYBVYREBVYRBVYBRYVBRYVGBREY',
+            '1 - Os funcionários estão devidamente uniformizados (padrão único) e identificados (crachá)?',
+            '2 - Os funcionários seguem as normas internas e orientações de segurança da SIC?',
+            '3 - Os funcionários mantem sigilo das informações das quais possuem acesso?',
+            '4 - Os funcionários zelam pela segurança e cuidado com os funcionarios e alunos do colégio?',
+            '5 - Os Funcionarios comunicam, qualquer anormalidade em relação ao andamento dos serviços, prestando à SIC os esclarecimentos, que julgar necessários?',
         ],
-    },
+        'Qualidade': [
+            '1 - Os funcionários da contratada executam suas atividades diárias com qualidade, atendendo todas as demandas inerentes ao objeto deste contrato?',
+            '2 - Os funcionários da contratada atendem com cortesia e presteza, prestando uma boa relação quando solicitados?',
+            '3 - Os funcionários da contratada comunicam-se com eficácia?',
+            '4 - Os funcionários da contratada ocupam-se permanentemente no local designado para exercicio de suas funções, não se afastando deste local, salvo em situações de necessidade?',
+            '5 - Os funcionários da contratada transmitem segurança na execução de suas tarefas?',
+            '6 - Os funcionários da contratada zelam pelos materiais e equipamentos quando estão dentro das dependências do colégio?',
+        ],
+        'Documentação': [
+            '1 - Os documentos obrigatórios para análise e faturamento foram entregues dentro do prazo acordado em contrato?',
+            '2 - A contratada apresentou todas as documentações exigidas, conforme contrato com os devidos recolhimentos e pagamentos?',
+            '3 - A Nota Fiscal foi emitida com dados corretos?',
+            '4 - CND e CRT, relativos à Regularidade Fiscal e Trabalhista, estão atualizados?',
+        ]
+    }
 }
