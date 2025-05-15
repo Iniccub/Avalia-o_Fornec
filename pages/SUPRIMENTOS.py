@@ -225,7 +225,7 @@ if fornecedor and unidade and periodo:
     perguntas_fornecedor = perguntas_por_fornecedor.get(fornecedor, {})
 
     with tab1:
-        perguntas_tab1 = perguntas_fornecedor.get('Atividades Operacionais', [])
+        perguntas_tab1 = perguntas_fornecedor.get('Documentação', [])
         for pergunta in perguntas_tab1:
             resposta = st.selectbox(pergunta, options=opcoes, index=None, placeholder='Selecione uma opção', key=pergunta)
             respostas.append(resposta)
