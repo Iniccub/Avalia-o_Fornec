@@ -36,20 +36,37 @@ tab1, tab2 = st.tabs(['Fornecedores Cadastrados', 'Perguntas Cadastradas'])
 with tab1:
     st.subheader('Lista de Fornecedores')
     
+    # Ordenar fornecedores alfabeticamente
+    fornecedores_ordenados = sorted(fornecedores_por_unidade.items())
+    
+    # Menu suspenso para filtrar fornecedores
+    opcoes_filtro = ['Todos os Fornecedores'] + [f[0] for f in fornecedores_ordenados]
+    filtro_selecionado = st.selectbox('🔍 Filtrar fornecedor', opcoes_filtro)
+    
+    # Filtrar fornecedores baseado na seleção
+    fornecedores_filtrados = [
+        (fornecedor, unidades) 
+        for fornecedor, unidades in fornecedores_ordenados 
+        if filtro_selecionado == 'Todos os Fornecedores' or fornecedor == filtro_selecionado
+    ]
+    
     # Criar uma lista de fornecedores com checkbox e botão de edição
     fornecedores_selecionados = {}
-    for fornecedor, unidades in fornecedores_por_unidade.items():
-        col1, col2, col3, col4 = st.columns([0.1, 1, 1, 0.2])
-        with col1:
-            fornecedores_selecionados[fornecedor] = st.checkbox('', key=f'check_{fornecedor}')
-        with col2:
-            st.write(f"**{fornecedor}**")
-        with col3:
-            st.write(f"Unidades: {', '.join(unidades)}")
-        with col4:
-            if st.button('📝', key=f'edit_{fornecedor}'):
-                st.session_state.editing_fornecedor = fornecedor
-                st.session_state.editing_unidades = unidades
+    if not fornecedores_filtrados:
+        st.info('Nenhum fornecedor encontrado.')
+    else:
+        for fornecedor, unidades in fornecedores_filtrados:
+            col1, col2, col3, col4 = st.columns([0.1, 1, 1, 0.2])
+            with col1:
+                fornecedores_selecionados[fornecedor] = st.checkbox('', key=f'check_{fornecedor}')
+            with col2:
+                st.write(f"**{fornecedor}**")
+            with col3:
+                st.write(f"Unidades: {', '.join(unidades)}")
+            with col4:
+                if st.button('📝', key=f'edit_{fornecedor}'):
+                    st.session_state.editing_fornecedor = fornecedor
+                    st.session_state.editing_unidades = unidades
 
     # Interface de edição
     if 'editing_fornecedor' in st.session_state:
@@ -187,7 +204,17 @@ with tab2:
             col1, col2 = st.columns(2)
             with col1:
                 if st.button('Excluir Selecionadas', key=f'excluir_{categoria}'):
-                    indices_selecionados = [idx for key, val in perguntas_selecionadas.items() if val and key.startswith(categoria)]
+                    # Aqui está o problema - precisamos extrair o índice numérico da chave
+                    indices_selecionados = []
+                    for key, val in perguntas_selecionadas.items():
+                        if val and key.startswith(f"{categoria}_"):
+                            # Extrair o índice da chave (formato: "categoria_idx")
+                            try:
+                                idx = int(key.split('_')[1])
+                                indices_selecionados.append(idx)
+                            except (IndexError, ValueError):
+                                pass
+                    
                     if indices_selecionados:
                         # Remover perguntas selecionadas
                         novas_perguntas = [p for i, p in enumerate(perguntas) if i not in indices_selecionados]
