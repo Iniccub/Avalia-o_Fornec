@@ -1,3 +1,6 @@
+from mongodb_config import get_database
+
+# Dados originais (mantidos para compatibilidade)
 perguntas_por_fornecedor = {
     'CANTINA FREITAS': {
         'Atividades Operacionais': [
@@ -12,7 +15,7 @@ perguntas_por_fornecedor = {
             '9 - Procedem a desinsetização e desratização da área cedida durante o período de férias do COLÉGIO, na data estabelecida, previamente, pela CONTRATANTE?',
         ],
         'Segurança': [
-            '1 - Fornece aos seus empregados os equipamentos/materiais, uniformes e EPI’s (Equipamentos de Proteção Individual) necessários para a realização dos serviços?',
+            '1 - Fornece aos seus empregados os equipamentos/materiais, uniformes e EPIs (Equipamentos de Proteção Individual) necessários para a realização dos serviços?',
             '2 - Os funcionários da cantina seguem as normas internas e orientações de segurança da SIC?',
             '3 - Os funcionários zelam pela segurança e cuidado com os funcionarios e alunos do colégio?',
             '4 - Os Funcionarios comunicam , qualquer anormalidade em relação ao andamento dos serviços, prestando à SIC os esclarecimentos, que julgar necessários?',
@@ -24,7 +27,7 @@ perguntas_por_fornecedor = {
             '2 - Os funcionários da contratada comunicam-se com eficácia?',
             '3 - Cumprem rigorosamente todas as normas técnicas relacionadas ao transporte e armazenamento de todo o tipo de ALIMENTO, especialmente as relativas a embalagens, volumes, etc?',
             '4 - A Cantina garante e zela pela boa qualidade dos produtos fornecidos aos usuários(alunos, pais/responsáveis de alunos e empregados do COLÉGIO e terceiros visitantes), em consonância com os parâmetros de qualidade fixados e exigidos pelas normas técnicas pertinentes, expedidas pelo Poder Público e/ou por órgãos e/ou entidades competentes?',
-            '5 - A cantina Não comercializa bebidas alcoólicas, cigarros, chicletes, balas, pirulitos, laranjinhas, “chup-chup” e tudo o mais que possa contrariar o bom andamento escolar e/ou causar dano a terceiro, sobretudo, mas não exclusivamente, aos alunos, pais de aluno e empregados do COLÉGIO?',
+            '5 - A cantina Não comercializa bebidas alcoólicas, cigarros, chicletes, balas, pirulitos, laranjinhas, "chup-chup" e tudo o mais que possa contrariar o bom andamento escolar e/ou causar dano a terceiro, sobretudo, mas não exclusivamente, aos alunos, pais de aluno e empregados do COLÉGIO?',
             '6 - Oferecem e fornecem, sempre que necessário, alimentação especial para os alunos, pais de aluno e/ou empregados que possuam alguma restrição alimentar ou dieta especial, recomendada por profissional de saúde?',
         ],
         'Documentação': [
@@ -290,7 +293,7 @@ perguntas_por_fornecedor = {
             '2 - Os funcionários da contratada atendem com cortesia e presteza, prestando uma boa relação quando solicitados?',
             '3 - Os funcionários da contratada comunicam-se com eficácia?',
             '4 - Os funcionários da contratada ocupam-se permanentemente no local designado para exercicio de suas funções, não se afastando deste local, salvo em situações de necessidade?',
-            '5 - Os funcionários da contratada transmitem segurança na execução de suas tarefas?',
+            '5 - Os funcionários da contratada transmitem segurança e conhecimento técnico na execução de suas tarefas?',
             '6 - Os funcionários da contratada zelam pelos materiais e equipamentos quando estão dentro das dependências do colégio?',
         ],
         'Documentação': [
@@ -298,6 +301,149 @@ perguntas_por_fornecedor = {
             '2 - A contratada apresentou todas as documentações exigidas, conforme contrato com os devidos recolhimentos e pagamentos?',
             '3 - A Nota Fiscal foi emitida com dados corretos?',
             '4 - CND e CRT, relativos à Regularidade Fiscal e Trabalhista, estão atualizados?',
-        ]
-    }
+        ],
+    },
+    'QA - IT ANSWER - CONSULTORIA - N1': {
+        'Atividades Operacionais': [
+            '1 - O quantitativo (quadro efetivo) de funcionários da contratada está conforme especificação e acordado em contrato?',
+            '2 - Os funcionários cumprem a escala de serviço, observando pontualmente os horários de entrada e saída, sendo assíduos e pontuais ao trabalho?',
+            '3 - A empresa fornece o ponto eletrônico e o mantem em pleno funcionamento, registrando e apurando os horários registrados dos respectivos funcionários?',
+            '4 - A SIC é  informada previamente das eventuais substituições dos funcionários da contratada?',
+            '5 - O(s) profissional (is) indicado(s) para execução dos serviços objeto do presente contrato, possue conhecimento técnico necessário para realizar as atividades pertinentes ao Analista de Suporte Tecnico em TI - N1, executando as funções que lhe forem atribuídas ?',
+            '6 - o profissional N2 da Contratada, executa a coordenação da  equipe de técnicos N1 , direcionando as demandas conforme orientação da SIC?',
+        ],
+        'Segurança': [
+            '1 - Os funcionários seguem as normas internas e orientações de segurança da SIC ?',
+            '2 - Os funcionários mantem sigilo das informações das quais possuem acesso?',
+            '3 - Os funcionários zelam pela segurança e cuidado com suas entregas, conforme são demandados?',
+            '4 - Os Funcionarios comunicam, qualquer anormalidade em relação ao andamento dos serviços, prestando à SIC os esclarecimentos, que julgar necessários',
+        ],
+        'Qualidade': [
+            '1 - Os funcionários da contratada executam suas atividades diárias com qualidade, atendendo todas as demandas inerentes ao objeto deste contrato?',
+            '2 - Os funcionários da contratada atendem com cortesia e presteza, prestando uma boa relação quando solicitados?',
+            '3 - Os funcionários da contratada comunicam-se com eficácia?',
+            '4 - Os funcionários da contratada ocupam-se permanentemente no local designado para exercicio de suas funções, não se afastando deste local, salvo em situações de necessidade?',
+            '5 - Os funcionários da contratada transmitem segurança e conhecimento técnico na execução de suas tarefas?',
+            '6 - Os funcionários da contratada zelam pelos materiais e equipamentos quando estão dentro das dependências do colégio?',
+        ],
+        'Documentação': [
+            '1 - Os documentos obrigatórios para análise e faturamento foram entregues dentro do prazo acordado em contrato?',
+            '2 - A contratada apresentou todas as documentações exigidas, conforme contrato com os devidos recolhimentos e pagamentos?',
+            '3 - A Nota Fiscal foi emitida com dados corretos?',
+            '4 - CND e CRT, relativos à Regularidade Fiscal e Trabalhista, estão atualizados?',
+        ],
+    },
+    'GULP SÃO TOMAS': {
+        'Segurança': [
+        ],
+        'Atividades Operacionais': [
+        ],
+    },
 }
+
+# Funções para manipular perguntas no MongoDB
+def get_perguntas():
+    try:
+        db = get_database()
+        collection = db["perguntas"]
+        
+        # Verificar se já existem perguntas no banco
+        if collection.count_documents({}) == 0:
+            # Se não existir, inicializar com os dados padrão
+            for fornecedor, categorias in perguntas_por_fornecedor.items():
+                for categoria, perguntas in categorias.items():
+                    collection.insert_one({
+                        "fornecedor": fornecedor,
+                        "categoria": categoria,
+                        "perguntas": perguntas
+                    })
+            return perguntas_por_fornecedor
+        else:
+            # Se existir, retornar as perguntas do banco
+            result = collection.find({})
+            perguntas = {}
+            for doc in result:
+                fornecedor = doc["fornecedor"]
+                categoria = doc["categoria"]
+                lista_perguntas = doc["perguntas"]
+                
+                if fornecedor not in perguntas:
+                    perguntas[fornecedor] = {}
+                
+                perguntas[fornecedor][categoria] = lista_perguntas
+            
+            return perguntas
+    except Exception as e:
+        print(f"Erro ao obter perguntas do MongoDB: {str(e)}")
+        return perguntas_por_fornecedor
+
+def add_pergunta(fornecedor, categoria, pergunta):
+    if fornecedor and categoria and pergunta:
+        try:
+            db = get_database()
+            collection = db["perguntas"]
+            
+            # Verificar se já existe documento para este fornecedor e categoria
+            existing = collection.find_one({"fornecedor": fornecedor, "categoria": categoria})
+            
+            if existing:
+                # Atualizar lista de perguntas
+                collection.update_one(
+                    {"fornecedor": fornecedor, "categoria": categoria},
+                    {"$push": {"perguntas": pergunta}}
+                )
+            else:
+                # Criar novo documento
+                collection.insert_one({
+                    "fornecedor": fornecedor,
+                    "categoria": categoria,
+                    "perguntas": [pergunta]
+                })
+            return True
+        except Exception as e:
+            print(f"Erro ao adicionar pergunta no MongoDB: {str(e)}")
+            return False
+    return False
+
+def remove_pergunta(fornecedor, categoria, pergunta):
+    if fornecedor and categoria and pergunta:
+        try:
+            db = get_database()
+            collection = db["perguntas"]
+            
+            # Remover a pergunta da lista
+            collection.update_one(
+                {"fornecedor": fornecedor, "categoria": categoria},
+                {"$pull": {"perguntas": pergunta}}
+            )
+            return True
+        except Exception as e:
+            print(f"Erro ao remover pergunta do MongoDB: {str(e)}")
+            return False
+    return False
+
+def get_perguntas_por_fornecedor(fornecedor):
+    try:
+        db = get_database()
+        collection = db["perguntas"]
+        
+        # Buscar todas as perguntas para o fornecedor
+        result = collection.find({"fornecedor": fornecedor})
+        
+        perguntas_fornecedor = {}
+        for doc in result:
+            categoria = doc["categoria"]
+            perguntas = doc["perguntas"]
+            perguntas_fornecedor[categoria] = perguntas
+        
+        return perguntas_fornecedor
+    except Exception as e:
+        print(f"Erro ao obter perguntas do fornecedor do MongoDB: {str(e)}")
+        # Fallback para dados locais
+        if fornecedor in perguntas_por_fornecedor:
+            return perguntas_por_fornecedor[fornecedor]
+        return {}
+
+# Inicializar a coleção se for a primeira execução
+if __name__ == "__main__":
+    get_perguntas()

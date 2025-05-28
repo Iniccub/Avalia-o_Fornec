@@ -1,13 +1,21 @@
+# Substituir importação dinâmica por importação direta
 import streamlit as st
 import pandas as pd
 import os
 from openpyxl import load_workbook
 from streamlit_js_eval import streamlit_js_eval
 from io import BytesIO
-import importlib.util
+import importlib
 import sys
 
-# Função para importar módulos dinamicamente
+# Importar diretamente os módulos
+from mongodb_config import get_database
+from Office365_api import SharePoint
+from fornecedores_por_unidade import get_fornecedores
+from unidades import get_unidades
+from perguntas_por_fornecedor import get_perguntas
+
+# Remover a função import_module e as chamadas relacionadas
 def import_module(module_name, file_path):
     try:
         spec = importlib.util.spec_from_file_location(module_name, file_path)
@@ -27,16 +35,18 @@ fornecedores_module = import_module('fornecedores_por_unidade', 'fornecedores_po
 unidades_module = import_module('unidades', 'unidades.py')
 perguntas_module = import_module('perguntas_por_fornecedor', 'perguntas_por_fornecedor.py')
 
-# Acessar os atributos dos módulos
-fornecedores_por_unidade = getattr(fornecedores_module, 'fornecedores_por_unidade', {})
-unidades = getattr(unidades_module, 'unidades', [])
-perguntas_por_fornecedor = getattr(perguntas_module, 'perguntas_por_fornecedor', {})
-
-st.set_page_config(
-    page_title='Avaliação de Fornecedores - SUP',
-    page_icon='CSA.png',
-    layout='wide'
-)
+# Acessar os atributos dos módulos usando as novas funções MongoDB
+try:
+    # Tentar obter dados do MongoDB
+    unidades = unidades_module.get_unidades()
+    fornecedores_por_unidade = fornecedores_module.get_fornecedores()
+    perguntas_por_fornecedor = perguntas_module.get_perguntas()
+except Exception as e:
+    # Fallback para os dados originais se houver erro
+    st.error(f"Erro ao conectar com MongoDB: {str(e)}. Usando dados locais.")
+    fornecedores_por_unidade = getattr(fornecedores_module, 'fornecedores_por_unidade', {})
+    unidades = getattr(unidades_module, 'unidades', [])
+    perguntas_por_fornecedor = getattr(perguntas_module, 'perguntas_por_fornecedor', {})
 
 # Listas fixas
 meses_raw = ['31/01/2025', '28/02/2025', '31/03/2025', '30/04/2025', '31/05/2025', '30/06/2025', '31/07/2025', '31/08/2025',
@@ -67,39 +77,20 @@ def carregar_fornecedores():
 
 CAMINHO_FORNECEDORES = 'fornecedores_por_unidade.py'
 
+# Modificar a função salvar_fornecedores para usar MongoDB
 def salvar_fornecedores(fornecedor, unidades_selecionadas):
     try:
-        # Criar backup do arquivo atual
-        if os.path.exists(CAMINHO_FORNECEDORES):
-            backup_path = f"{CAMINHO_FORNECEDORES}.bak"
-            os.replace(CAMINHO_FORNECEDORES, backup_path)
-        
-        # Tentar carregar o dicionário existente
-        with open(CAMINHO_FORNECEDORES, 'r', encoding='utf-8') as f:
-            content = f.read()
-            if content.strip():
-                # Executar o conteúdo do arquivo para obter o dicionário
-                local_dict = {}
-                exec(content, {}, local_dict)
-                fornecedores_dict = local_dict.get('fornecedores_por_unidade', {})
-            else:
-                fornecedores_dict = {}
-    except FileNotFoundError:
-        fornecedores_dict = {}
-
-    # Adicionar novo fornecedor mantendo os existentes
-    fornecedores_dict[fornecedor] = unidades_selecionadas
-
-    # Salvar o dicionário atualizado de volta no arquivo
-    with open(CAMINHO_FORNECEDORES, 'w', encoding='utf-8') as f:
-        f.write('fornecedores_por_unidade = {\n')
-        for forn, units in fornecedores_dict.items():
-            f.write(f"    '{forn}': {units},\n")
-        f.write('}\n')
-
-    # Atualizar o módulo e retornar o dicionário atualizado
-    fornecedores_module = import_module('fornecedores_por_unidade', 'fornecedores_por_unidade.py')
-    return getattr(fornecedores_module, 'fornecedores_por_unidade', {})
+        # Usar a função do módulo para adicionar/atualizar fornecedor
+        success = fornecedores_module.add_fornecedor(fornecedor, unidades_selecionadas)
+        if success:
+            # Atualizar a variável local
+            global fornecedores_por_unidade
+            fornecedores_por_unidade = fornecedores_module.get_fornecedores()
+            return True
+        return False
+    except Exception as e:
+        st.error(f"Erro ao salvar fornecedor: {str(e)}")
+        return False
 
 @st.dialog("Cadastrar Novo Fornecedor", width="large")
 def cadastrar_fornecedor():
@@ -171,14 +162,6 @@ else:
                                      options=[], 
                                      placeholder='Primeiro selecione uma unidade')
 
-#st.sidebar.write('---')
-#st.sidebar.write('ATENÇÃO 🤚 Área de uso exclusivo da equipe de Suprimentos')
-
-#with st.sidebar:
-    # Cadastrar novo fornecedor
-    #if st.button('Cadastrar fornecedor'):
-        #cadastrar_fornecedor()
-
 # Tela para cadastrar nova pergunta
 @st.dialog("Cadastrar Nova Pergunta", width="large")
 def cadastrar_pergunta():
@@ -197,30 +180,18 @@ def cadastrar_pergunta():
         
         if submitted:
             if fornecedor and categoria and nova_pergunta:
-                # Carregar perguntas existentes
-                from perguntas_por_fornecedor import perguntas_por_fornecedor
-
-                # Adicionar nova pergunta
-                if fornecedor not in perguntas_por_fornecedor:
-                    perguntas_por_fornecedor[fornecedor] = {}
-                if categoria not in perguntas_por_fornecedor[fornecedor]:
-                    perguntas_por_fornecedor[fornecedor][categoria] = []
-                perguntas_por_fornecedor[fornecedor][categoria].append(nova_pergunta)
-
-                # Salvar de volta no arquivo
-                with open('perguntas_por_fornecedor.py', 'w', encoding='utf-8') as f:
-                    f.write('perguntas_por_fornecedor = {\n')
-                    for forn, cats in perguntas_por_fornecedor.items():
-                        f.write(f"    '{forn}': {{\n")
-                        for cat, perguntas in cats.items():
-                            f.write(f"        '{cat}': [\n")
-                            for pergunta in perguntas:
-                                f.write(f"            '{pergunta}',\n")
-                            f.write("        ],\n")
-                        f.write("    },\n")
-                    f.write('}\n')
-                
-                st.success("Pergunta adicionada com sucesso!")
+                try:
+                    # Usar a função do módulo para adicionar pergunta
+                    success = perguntas_module.add_pergunta(fornecedor, categoria, nova_pergunta)
+                    if success:
+                        # Atualizar a variável local
+                        global perguntas_por_fornecedor
+                        perguntas_por_fornecedor = perguntas_module.get_perguntas()
+                        st.success("Pergunta adicionada com sucesso!")
+                    else:
+                        st.warning("Não foi possível adicionar a pergunta.")
+                except Exception as e:
+                    st.error(f"Erro ao adicionar pergunta: {str(e)}")
             else:
                 st.warning("Por favor, preencha todos os campos.")
 
@@ -289,6 +260,17 @@ if fornecedor and unidade and periodo:
             ['Qualidade'] * len(perguntas_tab3)
     )
 
+    # No início do arquivo, após os imports, adicione inicialização de estado da sessão
+    if 'pesquisa_salva' not in st.session_state:
+        st.session_state.pesquisa_salva = False
+    if 'df_respostas' not in st.session_state:
+        st.session_state.df_respostas = None
+    if 'nome_arquivo' not in st.session_state:
+        st.session_state.nome_arquivo = ""
+    if 'output' not in st.session_state:
+        st.session_state.output = None
+    
+    # Substitua o bloco do botão 'Salvar pesquisa' por este código
     if st.sidebar.button('Salvar pesquisa'):
         try:
             if None in respostas:
@@ -311,25 +293,64 @@ if fornecedor and unidade and periodo:
                 nome_unidade = "".join(x for x in unidade if x.isalnum() or x in ['_', '-'])
                 nome_arquivo = f'{nome_fornecedor}_{nome_periodo}_{nome_unidade}.xlsx'
                 
-                # Resto do código permanece igual
                 # Salva o DataFrame em um objeto BytesIO
                 output = BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     df_respostas.to_excel(writer, index=False)
                 output.seek(0)
                 
-                # Cria um botão de download no Streamlit que permite escolher onde salvar
-                st.download_button(
-                    label='Clique aqui para salvar o arquivo Excel com as respostas',
-                    data=output,
-                    file_name=nome_arquivo,
-                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                )
+                # Salvar na sessão para uso posterior
+                st.session_state.pesquisa_salva = True
+                st.session_state.df_respostas = df_respostas
+                st.session_state.nome_arquivo = nome_arquivo
+                st.session_state.output = output
                 
-                st.success('Respostas processadas com sucesso! Clique no botão acima para salvar o arquivo.')
-                st.success(r'Caminho da pasta onde salvar o arquivo. Copie o endereço a partir daqui: \\\10.10.0.17\Dados\Administrativo e Suprimentos\GESTÃO DE FORNECEDORES\RESPOSTAS AVALIAÇÕES DE FORNECEDORES')
+                # Recarregar a página para mostrar os botões de download e SharePoint
+                st.rerun()
         except Exception as e:
             st.error(f"Erro ao salvar arquivo: {str(e)}")
+    
+    # Após o bloco do botão 'Salvar pesquisa', adicione este código para os botões de download e SharePoint
+    if st.session_state.pesquisa_salva:
+        # Cria um botão de download no Streamlit que permite escolher onde salvar
+        st.download_button(
+            label='Clique aqui para baixar o arquivo Excel com as respostas',
+            data=st.session_state.output,
+            file_name=st.session_state.nome_arquivo,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.success('Respostas processadas com sucesso! Clique no botão acima para baixar o arquivo.')
+        
+        with col2:
+            if st.button('Salvar no SharePoint'):
+                try:
+                    # Criar uma cópia do arquivo em memória para o SharePoint
+                    output_sharepoint = st.session_state.output.getvalue()
+                    
+                    # Definir a pasta no SharePoint onde o arquivo será salvo
+                    sharepoint_folder = "Avaliacao_Fornecedores/ADM"
+                    
+                    # Adicionar log para debug
+                    st.write(f"Tentando salvar arquivo: {st.session_state.nome_arquivo} na pasta: {sharepoint_folder}")
+                    
+                    # Fazer upload para o SharePoint
+                    sp = SharePoint()
+                    response = sp.upload_file(st.session_state.nome_arquivo, sharepoint_folder, output_sharepoint)
+                    
+                    # Adicionar log para verificar a resposta
+                    st.write(f"Resposta do SharePoint: {response}")
+                    
+                    st.success(f'Arquivo {st.session_state.nome_arquivo} salvo com sucesso no SharePoint!')
+                except Exception as e:
+                    st.error(f"Erro ao salvar no SharePoint: {str(e)}")
+                    # Adicionar informações detalhadas do erro
+                    import traceback
+                    st.error(traceback.format_exc())
+        
+        st.success(r'Caminho da pasta onde salvar o arquivo. Copie o endereço a partir daqui: \\\10.10.0.17\Dados\Administrativo e Suprimentos\GESTÃO DE FORNECEDORES\RESPOSTAS AVALIAÇÕES DE FORNECEDORES')
     else:
         st.warning('Por favor, selecione a unidade, o período e o fornecedor para iniciar a avaliação.')
 
@@ -362,3 +383,15 @@ for file in required_files:
     if not os.path.exists(file):
         st.error(f"Arquivo {file} não encontrado. Por favor, verifique se todos os arquivos necessários estão presentes.")
         st.stop()
+
+# Adicione este código no início do arquivo, após os imports
+import os
+
+# Verificar se as variáveis de ambiente estão sendo carregadas
+st.sidebar.expander("Debug SharePoint").write({
+    "sharepoint_email": os.getenv('sharepoint_email', 'Não encontrado'),
+    "sharepoint_url_site": os.getenv('sharepoint_url_site', 'Não encontrado'),
+    "sharepoint_site_name": os.getenv('sharepoint_site_name', 'Não encontrado'),
+    "sharepoint_doc_library": os.getenv('sharepoint_doc_library', 'Não encontrado'),
+    "password": "*****" if os.getenv('sharepoint_password') else "Não encontrado"
+})
