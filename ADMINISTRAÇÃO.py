@@ -383,15 +383,3 @@ for file in required_files:
     if not os.path.exists(file):
         st.error(f"Arquivo {file} não encontrado. Por favor, verifique se todos os arquivos necessários estão presentes.")
         st.stop()
-
-# Adicione este código no início do arquivo, após os imports
-import os
-
-# Verificar se as variáveis de ambiente estão sendo carregadas
-st.sidebar.expander("Debug SharePoint").write({
-    "sharepoint_email": os.getenv('sharepoint_email', 'Não encontrado'),
-    "sharepoint_url_site": os.getenv('sharepoint_url_site', 'Não encontrado'),
-    "sharepoint_site_name": os.getenv('sharepoint_site_name', 'Não encontrado'),
-    "sharepoint_doc_library": os.getenv('sharepoint_doc_library', 'Não encontrado'),
-    "password": "*****" if os.getenv('sharepoint_password') else "Não encontrado"
-})
