@@ -2,6 +2,12 @@ import streamlit as st
 import importlib.util
 import sys
 import os
+import zipfile
+import tempfile
+from io import BytesIO
+
+# Adicionar import para SharePoint
+from Office365_api import SharePoint
 
 # Função para importar módulos dinamicamente
 def import_module(module_name, file_path):
@@ -11,6 +17,127 @@ def import_module(module_name, file_path):
     spec.loader.exec_module(module)
     return module
 
+st.set_page_config(
+    page_title='Gestão - Avaliação de Fornecedores',
+    page_icon='CSA.png',
+    layout='wide'
+)
+
+# Obtendo o caminho base do projeto
+base_path = os.path.dirname(os.path.dirname(__file__))
+
+# Importar módulos locais com caminhos absolutos
+fornecedores_module = import_module('fornecedores_por_unidade', os.path.join(base_path, 'fornecedores_por_unidade.py'))
+perguntas_module = import_module('perguntas_por_fornecedor', os.path.join(base_path, 'perguntas_por_fornecedor.py'))
+unidades_module = import_module('unidades', os.path.join(base_path, 'unidades.py'))
+
+# Acessar os dados usando as funções MongoDB
+try:
+    fornecedores_por_unidade = fornecedores_module.get_fornecedores()
+    unidades = unidades_module.get_unidades()
+except Exception as e:
+    st.error(f"Erro ao conectar ao MongoDB: {str(e)}")
+    fornecedores_por_unidade = getattr(fornecedores_module, 'fornecedores_por_unidade', {})
+    unidades = getattr(unidades_module, 'unidades', [])
+
+try:
+    perguntas_por_fornecedor = perguntas_module.get_perguntas()
+except Exception as e:
+    st.error(f"Erro ao conectar ao MongoDB: {str(e)}")
+    perguntas_por_fornecedor = getattr(perguntas_module, 'perguntas_por_fornecedor', {})
+
+# Adicionar função para baixar arquivos do SharePoint
+def download_sharepoint_files(folders):
+    try:
+        # Criar um arquivo ZIP em memória
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            sp = SharePoint()
+            
+            # Para cada pasta, baixar todos os arquivos
+            for folder in folders:
+                try:
+                    # Obter lista de arquivos na pasta
+                    files_list = sp._get_files_list(folder)
+                    
+                    # Se não houver arquivos, continuar para a próxima pasta
+                    if not files_list:
+                        continue
+                    
+                    # Baixar cada arquivo e adicionar ao ZIP
+                    for file in files_list:
+                        try:
+                            # Baixar o arquivo
+                            file_content = sp.download_file(file.name, folder)
+                            
+                            # Adicionar ao ZIP com caminho incluindo a pasta
+                            zip_file.writestr(f"{folder}/{file.name}", file_content)
+                        except Exception as e:
+                            st.warning(f"Erro ao baixar arquivo {file.name}: {str(e)}")
+                except Exception as e:
+                    st.warning(f"Erro ao listar arquivos na pasta {folder}: {str(e)}")
+        
+        # Retornar ao início do buffer para leitura
+        zip_buffer.seek(0)
+        return zip_buffer
+    except Exception as e:
+        st.error(f"Erro ao criar arquivo ZIP: {str(e)}")
+        return None
+
+# Adicionar sidebar com botão para download
+st.sidebar.title("Ferramentas")
+st.sidebar.markdown("---")
+
+if st.sidebar.button("📥 Baixar Avaliações do SharePoint"):
+    with st.sidebar.status("Baixando arquivos do SharePoint...", expanded=True) as status:
+        # Pastas a serem baixadas
+        folders = ["Avaliacao_Fornecedores/ADM", "Avaliacao_Fornecedores/SUP"]
+        
+        # Baixar arquivos
+        st.sidebar.text("Obtendo arquivos...")
+        zip_data = download_sharepoint_files(folders)
+        
+        if zip_data:
+            # Oferecer o ZIP para download
+            st.sidebar.download_button(
+                label="📥 Baixar Arquivo ZIP",
+                data=zip_data,
+                file_name="Avaliacoes_Fornecedores.zip",
+                mime="application/zip"
+            )
+            status.update(label="Download concluído!", state="complete")
+        else:
+            status.update(label="Erro ao baixar arquivos", state="error")
+
+# Adicionar rodapé
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style='text-align: center; color: #888; font-size: 12px;'>
+    © 2025 FP&A e Orçamento - Rede Lius
+</div>
+""", unsafe_allow_html=True)
+
+# Rodapé com copyright
+st.markdown("""
+<style>
+.footer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: #f0f0f0;
+    color: #333;
+    text-align: center;
+    padding: 10px;
+    font-size: 14px;
+}
+</style>
+<div class="footer">
+    © 2025 FP&A e Orçamento - Rede Lius. Todos os direitos reservados.
+</div>
+""", unsafe_allow_html=True)
+
+# Conteúdo principal da página
 # Obtendo o caminho base do projeto
 base_path = os.path.dirname(os.path.dirname(__file__))
 
@@ -21,12 +148,6 @@ perguntas_module = import_module('perguntas_por_fornecedor', os.path.join(base_p
 # Acessar os atributos dos módulos
 fornecedores_por_unidade = getattr(fornecedores_module, 'fornecedores_por_unidade', {})
 perguntas_por_fornecedor = getattr(perguntas_module, 'perguntas_por_fornecedor', {})
-
-st.set_page_config(
-    page_title='Gestão - Avaliação de Fornecedores',
-    page_icon='CSA.png',
-    layout='wide'
-)
 
 st.title('Gestão de Cadastros')
 st.write('---')
