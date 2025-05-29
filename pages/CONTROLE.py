@@ -75,6 +75,31 @@ def get_avaliacoes_mongodb():
         st.error(f"Erro ao consultar MongoDB: {str(e)}")
         return pd.DataFrame()
 
+# Função para excluir avaliações do MongoDB
+def excluir_avaliacoes(registros_para_excluir):
+    try:
+        db = get_database()
+        collection = db["avaliacoes"]
+        
+        excluidos = 0
+        for registro in registros_para_excluir:
+            # Criar filtro para encontrar o registro exato
+            filtro = {
+                "Fornecedor": registro["Fornecedor"],
+                "Unidade": registro["Unidade"],
+                "Período": registro["Período"],
+                "Data_Avaliacao": registro["Data_Avaliacao"]
+            }
+            
+            # Excluir o registro
+            resultado = collection.delete_many(filtro)
+            excluidos += resultado.deleted_count
+        
+        return excluidos
+    except Exception as e:
+        st.error(f"Erro ao excluir avaliações: {str(e)}")
+        return 0
+
 # Obter avaliações do MongoDB
 avaliacoes_df = get_avaliacoes_mongodb()
 
@@ -140,6 +165,54 @@ if not df_filtrado.empty:
     
     # Mostrar contagem
     st.info(f"{len(df_filtrado)} avaliações encontradas")
+    
+    # Adicionar funcionalidade para excluir registros
+    st.subheader("Excluir Avaliações")
+    st.warning("⚠️ Atenção: A exclusão de avaliações é permanente e não pode ser desfeita.")
+    
+    # Inicializar estado da sessão para armazenar seleções
+    if 'registros_selecionados' not in st.session_state:
+        st.session_state.registros_selecionados = []
+    
+    # Criar colunas para organizar a interface
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        # Adicionar multiselect para escolher registros a serem excluídos
+        opcoes = [f"{row['Fornecedor']} - {row['Unidade']} - {row['Período']} ({row['Data da Avaliação']})" for _, row in df_exibicao.iterrows()]
+        indices_selecionados = st.multiselect(
+            "Selecione as avaliações que deseja excluir:",
+            options=range(len(opcoes)),
+            format_func=lambda x: opcoes[x]
+        )
+        
+        # Armazenar registros selecionados
+        st.session_state.registros_selecionados = [df_filtrado.iloc[i].to_dict() for i in indices_selecionados]
+    
+    with col2:
+        # Botão para confirmar exclusão
+        if st.button("Excluir Selecionados", type="primary", disabled=len(st.session_state.registros_selecionados) == 0):
+            if st.session_state.registros_selecionados:
+                # Confirmar exclusão
+                confirmacao = st.warning("Tem certeza que deseja excluir os registros selecionados?", icon="⚠️")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Sim, excluir", type="primary"):
+                        # Excluir registros
+                        num_excluidos = excluir_avaliacoes(st.session_state.registros_selecionados)
+                        if num_excluidos > 0:
+                            st.success(f"{num_excluidos} avaliações excluídas com sucesso!")
+                            # Limpar seleção
+                            st.session_state.registros_selecionados = []
+                            # Recarregar a página para atualizar os dados
+                            st.rerun()
+                        else:
+                            st.error("Não foi possível excluir as avaliações selecionadas.")
+                with col2:
+                    if st.button("Cancelar"):
+                        # Limpar seleção
+                        st.session_state.registros_selecionados = []
+                        st.rerun()
 else:
     st.warning("Nenhuma avaliação encontrada com os filtros selecionados.")
 
