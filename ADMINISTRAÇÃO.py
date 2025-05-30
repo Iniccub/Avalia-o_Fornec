@@ -14,7 +14,7 @@ from Office365_api import SharePoint
 # Remover estas importações diretas
 from fornecedores_por_unidade import get_fornecedores
 from unidades import get_unidades
-from perguntas_por_fornecedor import get_perguntas
+#from perguntas_por_fornecedor import get_perguntas
 
 # Função para importação dinâmica
 def import_module(module_name, file_path):
@@ -34,7 +34,7 @@ def import_module(module_name, file_path):
 # Importar módulos locais
 fornecedores_module = import_module('fornecedores_por_unidade', 'fornecedores_por_unidade.py')
 unidades_module = import_module('unidades', 'unidades.py')
-#perguntas_module = import_module('perguntas_por_fornecedor', 'perguntas_por_fornecedor.py')
+perguntas_module = import_module('perguntas_por_fornecedor', 'perguntas_por_fornecedor.py')
 
 # Acessar os atributos dos módulos usando as novas funções MongoDB
 try:
