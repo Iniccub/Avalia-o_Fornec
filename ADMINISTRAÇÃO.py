@@ -12,9 +12,9 @@ import sys
 from mongodb_config import get_database
 from Office365_api import SharePoint
 # Remover estas importações diretas
-# from fornecedores_por_unidade import get_fornecedores
-# from unidades import get_unidades
-# from perguntas_por_fornecedor import get_perguntas
+from fornecedores_por_unidade import get_fornecedores
+from unidades import get_unidades
+from perguntas_por_fornecedor import get_perguntas
 
 # Função para importação dinâmica
 def import_module(module_name, file_path):
