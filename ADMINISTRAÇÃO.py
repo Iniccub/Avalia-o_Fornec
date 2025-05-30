@@ -34,7 +34,7 @@ def import_module(module_name, file_path):
 # Importar módulos locais
 fornecedores_module = import_module('fornecedores_por_unidade', 'fornecedores_por_unidade.py')
 unidades_module = import_module('unidades', 'unidades.py')
-perguntas_module = import_module('perguntas_por_fornecedor', 'perguntas_por_fornecedor.py')
+#perguntas_module = import_module('perguntas_por_fornecedor', 'perguntas_por_fornecedor.py')
 
 # Acessar os atributos dos módulos usando as novas funções MongoDB
 try:
