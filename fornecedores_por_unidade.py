@@ -1,5 +1,4 @@
 fornecedores_por_unidade = {
-    'DUNA ENGENHARIA LTDA': ['CSA-CT', 'CSA-BH'],
     'CANTINA FREITAS': ['CSA-BH'],
     'EXPRESSA TURISMO LTDA': ['CSA-BH', 'CSA-CT', 'CSA-NL', 'CSA-GZ', 'CSA-DV'],
     'ACREDITE EXCURSÕES E EXPOSIÇÕES INTINERANTE LTDA': ['CSA-BH'],
@@ -30,8 +29,7 @@ fornecedores_por_unidade = {
     'CONSERVADORA CIDADE PC': ['SIC SEDE'],
     'OTIS ELEVADORES': [],
     'ELEVADORES ATLAS SCHINDLER': ['CSA-CT', 'CSA-GZ'],
-    'FORMA CONHECER CIDADES LTDA': ['CSA-NL'],
-    'PADARIA PÃO FRANCES': ['CSA-BH', 'CSA-CT', 'CSA-NL'],
+    'FORMA CONHECER CIDADES LTDA': ['CSA-NL']
 }
 
 # Adicionar no início do arquivo
