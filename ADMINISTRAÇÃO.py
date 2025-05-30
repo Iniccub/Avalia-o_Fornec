@@ -11,11 +11,12 @@ import sys
 # Importar diretamente os módulos
 from mongodb_config import get_database
 from Office365_api import SharePoint
-from fornecedores_por_unidade import get_fornecedores
-from unidades import get_unidades
-from perguntas_por_fornecedor import get_perguntas
+# Remover estas importações diretas
+# from fornecedores_por_unidade import get_fornecedores
+# from unidades import get_unidades
+# from perguntas_por_fornecedor import get_perguntas
 
-# Remover a função import_module e as chamadas relacionadas
+# Função para importação dinâmica
 def import_module(module_name, file_path):
     try:
         spec = importlib.util.spec_from_file_location(module_name, file_path)
