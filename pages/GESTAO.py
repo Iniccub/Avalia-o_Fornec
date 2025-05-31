@@ -143,16 +143,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Conteúdo principal da página
-# Obtendo o caminho base do projeto
-base_path = os.path.dirname(os.path.dirname(__file__))
-
-# Importar módulos locais com caminhos absolutos
-fornecedores_module = import_module('fornecedores_por_unidade', os.path.join(base_path, 'fornecedores_por_unidade.py'))
-perguntas_module = import_module('perguntas_por_fornecedor', os.path.join(base_path, 'perguntas_por_fornecedor.py'))
-
-# Acessar os atributos dos módulos
-fornecedores_por_unidade = getattr(fornecedores_module, 'fornecedores_por_unidade', {})
-perguntas_por_fornecedor = getattr(perguntas_module, 'perguntas_por_fornecedor', {})
+# Não é necessário reimportar os módulos aqui, pois já foram importados no início do arquivo
+# e os dados já foram carregados do MongoDB
 
 st.title('Gestão de Cadastros')
 st.write('---')
@@ -217,19 +209,15 @@ with tab1:
             
             col1, col2 = st.columns(2)
             with col1:
+                # Edição de fornecedor
                 if st.form_submit_button('Salvar Alterações'):
                     # Remover fornecedor antigo
-                    del fornecedores_por_unidade[st.session_state.editing_fornecedor]
+                    fornecedores_module.remove_fornecedor(st.session_state.editing_fornecedor)
                     # Adicionar fornecedor com novo nome e unidades
-                    fornecedores_por_unidade[novo_nome] = novas_unidades
+                    fornecedores_module.add_fornecedor(novo_nome, novas_unidades)
                     
-                    # Salvar alterações
-                    fornecedores_path = os.path.join(base_path, 'fornecedores_por_unidade.py')
-                    with open(fornecedores_path, 'w', encoding='utf-8') as f:
-                        f.write('fornecedores_por_unidade = {\n')
-                        for forn, units in fornecedores_por_unidade.items():
-                            f.write(f"    '{forn}': {units},\n")
-                        f.write('}\n')
+                    # Atualizar a variável local para refletir as mudanças
+                    fornecedores_por_unidade = fornecedores_module.get_fornecedores()
                     
                     del st.session_state.editing_fornecedor
                     del st.session_state.editing_unidades
@@ -244,20 +232,16 @@ with tab1:
     # Botões de ação
     col1, col2 = st.columns(2)
     with col1:
+        # Exclusão de fornecedores
         if st.button('Excluir Selecionados', key='excluir_fornecedores'):
             selecionados = [f for f, v in fornecedores_selecionados.items() if v]
             if selecionados:
                 for fornecedor in selecionados:
-                    if fornecedor in fornecedores_por_unidade:
-                        del fornecedores_por_unidade[fornecedor]
+                    fornecedores_module.remove_fornecedor(fornecedor)
                 
-                # Salvar alterações
-                fornecedores_path = os.path.join(base_path, 'fornecedores_por_unidade.py')
-                with open(fornecedores_path, 'w', encoding='utf-8') as f:
-                    f.write('fornecedores_por_unidade = {\n')
-                    for forn, units in fornecedores_por_unidade.items():
-                        f.write(f"    '{forn}': {units},\n")
-                    f.write('}\n')
+                # Atualizar a variável local para refletir as mudanças
+                fornecedores_por_unidade = fornecedores_module.get_fornecedores()
+                
                 st.success('Fornecedores excluídos com sucesso!')
                 st.rerun()
 
@@ -296,29 +280,27 @@ with tab2:
                     
                     col1, col2 = st.columns(2)
                     with col1:
+                        # Edição de pergunta
                         if st.form_submit_button('Salvar Alterações'):
-                            # Atualizar a pergunta
-                            perguntas_por_fornecedor[fornecedor_selecionado][categoria][st.session_state.editing_pergunta_idx] = nova_pergunta
+                            # Atualizar a pergunta no MongoDB
+                            success = perguntas_module.update_pergunta(
+                                fornecedor_selecionado,
+                                categoria,
+                                st.session_state.editing_pergunta_idx,
+                                nova_pergunta
+                            )
                             
-                            # Salvar alterações
-                            perguntas_path = os.path.join(base_path, 'perguntas_por_fornecedor.py')
-                            with open(perguntas_path, 'w', encoding='utf-8') as f:
-                                f.write('perguntas_por_fornecedor = {\n')
-                                for forn, cats in perguntas_por_fornecedor.items():
-                                    f.write(f"    '{forn}': {{\n")
-                                    for cat, pergs in cats.items():
-                                        f.write(f"        '{cat}': [\n")
-                                        for perg in pergs:
-                                            f.write(f"            '{perg}',\n")
-                                        f.write("        ],\n")
-                                    f.write("    },\n")
-                                f.write('}\n')
-                            
-                            del st.session_state.editing_categoria
-                            del st.session_state.editing_pergunta_idx
-                            del st.session_state.editing_pergunta
-                            st.success('Pergunta atualizada com sucesso!')
-                            st.rerun()
+                            if success:
+                                # Atualizar a variável local para refletir as mudanças
+                                perguntas_por_fornecedor = perguntas_module.get_perguntas()
+                                
+                                del st.session_state.editing_categoria
+                                del st.session_state.editing_pergunta_idx
+                                del st.session_state.editing_pergunta
+                                st.success('Pergunta atualizada com sucesso!')
+                                st.rerun()
+                            else:
+                                st.error('Erro ao atualizar a pergunta. Tente novamente.')
                     with col2:
                         if st.form_submit_button('Cancelar'):
                             del st.session_state.editing_categoria
@@ -329,12 +311,12 @@ with tab2:
             # Botões de ação por categoria
             col1, col2 = st.columns(2)
             with col1:
+                # Exclusão de perguntas
                 if st.button('Excluir Selecionadas', key=f'excluir_{categoria}'):
-                    # Aqui está o problema - precisamos extrair o índice numérico da chave
+                    # Extrair índices selecionados
                     indices_selecionados = []
                     for key, val in perguntas_selecionadas.items():
                         if val and key.startswith(f"{categoria}_"):
-                            # Extrair o índice da chave (formato: "categoria_idx")
                             try:
                                 idx = int(key.split('_')[1])
                                 indices_selecionados.append(idx)
@@ -342,22 +324,17 @@ with tab2:
                                 pass
                     
                     if indices_selecionados:
-                        # Remover perguntas selecionadas
-                        novas_perguntas = [p for i, p in enumerate(perguntas) if i not in indices_selecionados]
-                        perguntas_por_fornecedor[fornecedor_selecionado][categoria] = novas_perguntas
+                        # Obter perguntas atuais
+                        perguntas = perguntas_por_fornecedor[fornecedor_selecionado][categoria]
                         
-                        # Salvar alterações
-                        perguntas_path = os.path.join(base_path, 'perguntas_por_fornecedor.py')
-                        with open(perguntas_path, 'w', encoding='utf-8') as f:
-                            f.write('perguntas_por_fornecedor = {\n')
-                            for forn, cats in perguntas_por_fornecedor.items():
-                                f.write(f"    '{forn}': {{\n")
-                                for cat, pergs in cats.items():
-                                    f.write(f"        '{cat}': [\n")
-                                    for perg in pergs:
-                                        f.write(f"            '{perg}',\n")
-                                    f.write("        ],\n")
-                                f.write("    },\n")
-                            f.write('}\n')
+                        # Remover cada pergunta selecionada
+                        for idx in sorted(indices_selecionados, reverse=True):
+                            if 0 <= idx < len(perguntas):
+                                pergunta = perguntas[idx]
+                                perguntas_module.remove_pergunta(fornecedor_selecionado, categoria, pergunta)
+                        
+                        # Atualizar a variável local para refletir as mudanças
+                        perguntas_por_fornecedor = perguntas_module.get_perguntas()
+                        
                         st.success('Perguntas excluídas com sucesso!')
                         st.rerun()
