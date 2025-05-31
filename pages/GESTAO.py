@@ -35,15 +35,20 @@ unidades_module = import_module('unidades', os.path.join(base_path, 'unidades.py
 try:
     fornecedores_por_unidade = fornecedores_module.get_fornecedores()
     unidades = unidades_module.get_unidades()
+    perguntas_por_fornecedor = perguntas_module.get_perguntas()
+    
+    # Verificar se os dados foram obtidos corretamente
+    if not unidades or not fornecedores_por_unidade or not perguntas_por_fornecedor:
+        raise Exception("Dados vazios retornados do MongoDB")
+        
+    # Adicionar mensagem de sucesso
+    st.success("Dados carregados com sucesso do MongoDB")
+    
 except Exception as e:
-    st.error(f"Erro ao conectar ao MongoDB: {str(e)}")
+    # Fallback para os dados originais se houver erro
+    st.error(f"Erro ao conectar ao MongoDB: {str(e)}. Usando dados locais como fallback.")
     fornecedores_por_unidade = getattr(fornecedores_module, 'fornecedores_por_unidade', {})
     unidades = getattr(unidades_module, 'unidades', [])
-
-try:
-    perguntas_por_fornecedor = perguntas_module.get_perguntas()
-except Exception as e:
-    st.error(f"Erro ao conectar ao MongoDB: {str(e)}")
     perguntas_por_fornecedor = getattr(perguntas_module, 'perguntas_por_fornecedor', {})
 
 # Adicionar função para baixar arquivos do SharePoint
