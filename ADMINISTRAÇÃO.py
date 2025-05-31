@@ -31,7 +31,7 @@ def import_module(module_name, file_path):
         st.error(f"Erro ao importar {module_name}: {str(e)}")
         return None
 
-# Importar módulos locais
+# Importar módulos locais de forma consistente
 fornecedores_module = import_module('fornecedores_por_unidade', 'fornecedores_por_unidade.py')
 unidades_module = import_module('unidades', 'unidades.py')
 perguntas_module = import_module('perguntas_por_fornecedor', 'perguntas_por_fornecedor.py')
@@ -42,9 +42,17 @@ try:
     unidades = unidades_module.get_unidades()
     fornecedores_por_unidade = fornecedores_module.get_fornecedores()
     perguntas_por_fornecedor = perguntas_module.get_perguntas()
+    
+    # Verificar se os dados foram obtidos corretamente
+    if not unidades or not fornecedores_por_unidade or not perguntas_por_fornecedor:
+        raise Exception("Dados vazios retornados do MongoDB")
+        
+    # Adicionar mensagem de sucesso
+    st.success("Dados carregados com sucesso do MongoDB")
+    
 except Exception as e:
-    # Fallback para os dados originais se houver erro
-    st.error(f"Erro ao conectar com MongoDB: {str(e)}. Usando dados locais.")
+    # Fallback para os dados originais apenas se houver erro
+    st.error(f"Erro ao conectar com MongoDB: {str(e)}. Usando dados locais como fallback.")
     fornecedores_por_unidade = getattr(fornecedores_module, 'fornecedores_por_unidade', {})
     unidades = getattr(unidades_module, 'unidades', [])
     perguntas_por_fornecedor = getattr(perguntas_module, 'perguntas_por_fornecedor', {})
