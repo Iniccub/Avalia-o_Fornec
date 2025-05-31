@@ -759,6 +759,31 @@ def get_perguntas_por_fornecedor(fornecedor):
             return perguntas_por_fornecedor[fornecedor]
         return {}
 
+def update_pergunta(fornecedor, categoria, indice, nova_pergunta):
+    if fornecedor and categoria and nova_pergunta:
+        try:
+            db = get_database()
+            collection = db["perguntas"]
+            
+            # Buscar o documento atual
+            doc = collection.find_one({"fornecedor": fornecedor, "categoria": categoria})
+            
+            if doc and 0 <= indice < len(doc["perguntas"]):
+                # Criar uma nova lista de perguntas com a pergunta atualizada
+                perguntas = doc["perguntas"]
+                perguntas[indice] = nova_pergunta
+                
+                # Atualizar o documento
+                collection.update_one(
+                    {"fornecedor": fornecedor, "categoria": categoria},
+                    {"$set": {"perguntas": perguntas}}
+                )
+                return True
+        except Exception as e:
+            print(f"Erro ao atualizar pergunta no MongoDB: {str(e)}")
+            return False
+    return False
+
 # Inicializar a coleção se for a primeira execução
 if __name__ == "__main__":
     get_perguntas()
