@@ -342,10 +342,10 @@ def salvar_fornecedores(fornecedor, unidades_selecionadas):
 @st.dialog("Cadastrar Novo Fornecedor", width="large")
 def cadastrar_fornecedor():
     st.subheader("Cadastro de Novo Fornecedor")
-    novo_fornecedor = st.text_input('Nome do fornecedor')
-    unidades_selecionadas = st.multiselect("Selecione as unidades", options=unidades)
+    novo_fornecedor = st.text_input('Nome do fornecedor', key="dialog_novo_fornecedor")
+    unidades_selecionadas = st.multiselect("Selecione as unidades", options=unidades, key="dialog_unidades_select")
 
-    if st.button("Salvar"):
+    if st.button("Salvar", key="dialog_salvar_fornecedor"):
         novo_fornecedor = novo_fornecedor.strip()
         if novo_fornecedor and unidades_selecionadas:
             if novo_fornecedor not in fornecedores_por_unidade:
@@ -364,11 +364,11 @@ def cadastrar_pergunta():
     st.subheader("Cadastro de Nova Pergunta")
     # Obter lista de fornecedores das unidades
     todos_fornecedores = list(fornecedores_por_unidade.keys())
-    fornecedor = st.selectbox("Selecione o fornecedor", options=todos_fornecedores)
-    categoria = st.selectbox('Categoria',('Atividades Operacionais', 'Segurança','Documentação', 'Qualidade'))
-    nova_pergunta = st.text_area("Nova pergunta", placeholder="Digite a nova pergunta aqui")
+    fornecedor = st.selectbox("Selecione o fornecedor", options=todos_fornecedores, key="dialog_fornecedor_select")
+    categoria = st.selectbox('Categoria',('Atividades Operacionais', 'Segurança','Documentação', 'Qualidade'), key="dialog_categoria_select")
+    nova_pergunta = st.text_area("Nova pergunta", placeholder="Digite a nova pergunta aqui", key="dialog_nova_pergunta")
 
-    if st.button("Salvar"):
+    if st.button("Salvar", key="dialog_salvar_pergunta"):
         if fornecedor and categoria and nova_pergunta:
             try:
                 # Usar a função do módulo para adicionar pergunta
