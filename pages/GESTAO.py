@@ -338,3 +338,76 @@ with tab2:
                         
                         st.success('Perguntas excluídas com sucesso!')
                         st.rerun()
+
+# Adicionar após as importações e antes do conteúdo principal
+
+# Modificar a função salvar_fornecedores para usar MongoDB
+def salvar_fornecedores(fornecedor, unidades_selecionadas):
+    try:
+        # Usar a função do módulo para adicionar/atualizar fornecedor
+        success = fornecedores_module.add_fornecedor(fornecedor, unidades_selecionadas)
+        if success:
+            # Atualizar a variável local
+            global fornecedores_por_unidade
+            fornecedores_por_unidade = fornecedores_module.get_fornecedores()
+            return True
+        return False
+    except Exception as e:
+        st.error(f"Erro ao salvar fornecedor: {str(e)}")
+        return False
+
+@st.dialog("Cadastrar Novo Fornecedor", width="large")
+def cadastrar_fornecedor():
+    st.subheader("Cadastro de Novo Fornecedor")
+    novo_fornecedor = st.text_input('Nome do fornecedor')
+    unidades_selecionadas = st.multiselect("Selecione as unidades", options=unidades)
+
+    if st.button("Salvar"):
+        novo_fornecedor = novo_fornecedor.strip()
+        if novo_fornecedor and unidades_selecionadas:
+            if novo_fornecedor not in fornecedores_por_unidade:
+                # Salvar o novo fornecedor com suas unidades
+                if salvar_fornecedores(novo_fornecedor, unidades_selecionadas):
+                    st.toast(f'Fornecedor "{novo_fornecedor}" adicionado com sucesso!', icon='✅')
+                else:
+                    st.error("Erro ao adicionar fornecedor.")
+            else:
+                st.warning('Fornecedor já existe na lista')
+        else:
+            st.warning('Por favor, preencha o nome do fornecedor e selecione pelo menos uma unidade')
+
+@st.dialog("Cadastrar Nova Pergunta", width="large")
+def cadastrar_pergunta():
+    st.subheader("Cadastro de Nova Pergunta")
+    # Obter lista de fornecedores das unidades
+    todos_fornecedores = list(fornecedores_por_unidade.keys())
+    fornecedor = st.selectbox("Selecione o fornecedor", options=todos_fornecedores)
+    categoria = st.selectbox('Categoria',('Atividades Operacionais', 'Segurança','Documentação', 'Qualidade'))
+    nova_pergunta = st.text_area("Nova pergunta", placeholder="Digite a nova pergunta aqui")
+
+    if st.button("Salvar"):
+        if fornecedor and categoria and nova_pergunta:
+            try:
+                # Usar a função do módulo para adicionar pergunta
+                success = perguntas_module.add_pergunta(fornecedor, categoria, nova_pergunta)
+                if success:
+                    # Atualizar a variável local
+                    global perguntas_por_fornecedor
+                    perguntas_por_fornecedor = perguntas_module.get_perguntas()
+                    st.success("Pergunta adicionada com sucesso!")
+                else:
+                    st.warning("Não foi possível adicionar a pergunta.")
+            except Exception as e:
+                st.error(f"Erro ao adicionar pergunta: {str(e)}")
+        else:
+            st.warning("Por favor, preencha todos os campos.")
+# Adicionar na tab1 (Fornecedores Cadastrados), após os botões de ação existentes
+with col2:
+    if st.button('Cadastrar Novo Fornecedor', key='cadastrar_fornecedor'):
+        cadastrar_fornecedor()
+
+# Adicionar na tab2 (Perguntas Cadastradas), após a seleção do fornecedor
+if fornecedor_selecionado:
+    # Adicionar botão para cadastrar nova pergunta
+    if st.button('Cadastrar Nova Pergunta', key='cadastrar_pergunta'):
+        cadastrar_pergunta()
