@@ -342,10 +342,10 @@ def salvar_fornecedores(fornecedor, unidades_selecionadas):
 @st.dialog("Cadastrar Novo Fornecedor", width="large")
 def cadastrar_fornecedor():
     st.subheader("Cadastro de Novo Fornecedor")
-    novo_fornecedor = st.text_input('Nome do fornecedor', key="dialog_novo_fornecedor")
-    unidades_selecionadas = st.multiselect("Selecione as unidades", options=unidades, key="dialog_unidades_select")
+    novo_fornecedor = st.text_input('Nome do fornecedor', key="cadastro_novo_fornecedor")
+    unidades_selecionadas = st.multiselect("Selecione as unidades", options=unidades, key="cadastro_unidades_select")
 
-    if st.button("Salvar", key="dialog_salvar_fornecedor"):
+    if st.button("Salvar", key="cadastro_salvar_fornecedor"):
         novo_fornecedor = novo_fornecedor.strip()
         if novo_fornecedor and unidades_selecionadas:
             if novo_fornecedor not in fornecedores_por_unidade:
