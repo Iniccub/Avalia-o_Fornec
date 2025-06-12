@@ -125,26 +125,6 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Rodapé com copyright
-st.markdown("""
-<style>
-.footer {
-    position: fixed;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    background-color: #f0f0f0;
-    color: #333;
-    text-align: center;
-    padding: 10px;
-    font-size: 14px;
-}
-</style>
-<div class="footer">
-    © 2025 FP&A e Orçamento - Rede Lius. Todos os direitos reservados.
-</div>
-""", unsafe_allow_html=True)
-
 # Conteúdo principal da página
 # Não é necessário reimportar os módulos aqui, pois já foram importados no início do arquivo
 # e os dados já foram carregados do MongoDB
@@ -405,9 +385,31 @@ def cadastrar_pergunta():
         else:
             st.warning("Por favor, preencha todos os campos.")
 
+st.sidebar.write('---')
+
 # Adicionar botões para cadastro
 if st.sidebar.button('Cadastrar Novo Fornecedor', key='cadastrar_fornecedor_sidebar'):
     cadastrar_fornecedor()
 
 if st.sidebar.button('Cadastrar Nova Pergunta', key='cadastrar_pergunta_sidebar'):
     cadastrar_pergunta()
+
+# Rodapé com copyright
+st.markdown("""
+<style>
+.footer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: #f0f0f0;
+    color: #333;
+    text-align: center;
+    padding: 10px;
+    font-size: 14px;
+}
+</style>
+<div class="footer">
+    © 2025 FP&A e Orçamento - Rede Lius. Todos os direitos reservados.
+</div>
+""", unsafe_allow_html=True)
