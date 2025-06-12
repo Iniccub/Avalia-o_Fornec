@@ -93,11 +93,6 @@ def download_sharepoint_files(folders):
 st.sidebar.title("Ferramentas")
 st.sidebar.markdown("---")
 
-with st.sidebar:
-    # Cadastrar novo fornecedor
-    if st.button('Cadastrar fornecedor'):
-        cadastrar_fornecedor()
-        
 if st.sidebar.button("📥 Baixar Avaliações do SharePoint"):
     with st.sidebar.status("Baixando arquivos do SharePoint...", expanded=True) as status:
         # Pastas a serem baixadas
@@ -408,11 +403,11 @@ def cadastrar_pergunta():
             st.warning("Por favor, preencha todos os campos.")
 # Adicionar na tab1 (Fornecedores Cadastrados), após os botões de ação existentes
 with col2:
-    if st.button('Cadastrar Novo Fornecedor', key='cadastrar_fornecedor'):
+    if st.sidebar.button('Cadastrar Novo Fornecedor', key='cadastrar_fornecedor'):
         cadastrar_fornecedor()
 
 # Adicionar na tab2 (Perguntas Cadastradas), após a seleção do fornecedor
 if fornecedor_selecionado:
     # Adicionar botão para cadastrar nova pergunta
-    if st.button('Cadastrar Nova Pergunta', key='cadastrar_pergunta'):
+    if st.sidebar.button('Cadastrar Nova Pergunta', key='cadastrar_pergunta'):
         cadastrar_pergunta()
