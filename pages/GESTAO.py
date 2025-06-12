@@ -93,6 +93,11 @@ def download_sharepoint_files(folders):
 st.sidebar.title("Ferramentas")
 st.sidebar.markdown("---")
 
+with st.sidebar:
+    # Cadastrar novo fornecedor
+    if st.button('Cadastrar fornecedor'):
+        cadastrar_fornecedor()
+        
 if st.sidebar.button("📥 Baixar Avaliações do SharePoint"):
     with st.sidebar.status("Baixando arquivos do SharePoint...", expanded=True) as status:
         # Pastas a serem baixadas
