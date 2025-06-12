@@ -93,13 +93,6 @@ def download_sharepoint_files(folders):
 st.sidebar.title("Ferramentas")
 st.sidebar.markdown("---")
 
-# Adicionar botões para cadastro
-if st.sidebar.button('Cadastrar Novo Fornecedor', key='cadastrar_fornecedor_sidebar'):
-    cadastrar_fornecedor()
-
-if st.sidebar.button('Cadastrar Nova Pergunta', key='cadastrar_pergunta_sidebar'):
-    cadastrar_pergunta()
-
 # Separador antes do botão de download
 st.sidebar.markdown("---")
 
@@ -411,3 +404,10 @@ def cadastrar_pergunta():
                 st.error(f"Erro ao adicionar pergunta: {str(e)}")
         else:
             st.warning("Por favor, preencha todos os campos.")
+
+# Adicionar botões para cadastro
+if st.sidebar.button('Cadastrar Novo Fornecedor', key='cadastrar_fornecedor_sidebar'):
+    cadastrar_fornecedor()
+
+if st.sidebar.button('Cadastrar Nova Pergunta', key='cadastrar_pergunta_sidebar'):
+    cadastrar_pergunta()
