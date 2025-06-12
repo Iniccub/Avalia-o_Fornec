@@ -93,6 +93,16 @@ def download_sharepoint_files(folders):
 st.sidebar.title("Ferramentas")
 st.sidebar.markdown("---")
 
+# Adicionar botões para cadastro
+if st.sidebar.button('Cadastrar Novo Fornecedor', key='cadastrar_fornecedor_sidebar'):
+    cadastrar_fornecedor()
+
+if st.sidebar.button('Cadastrar Nova Pergunta', key='cadastrar_pergunta_sidebar'):
+    cadastrar_pergunta()
+
+# Separador antes do botão de download
+st.sidebar.markdown("---")
+
 if st.sidebar.button("📥 Baixar Avaliações do SharePoint"):
     with st.sidebar.status("Baixando arquivos do SharePoint...", expanded=True) as status:
         # Pastas a serem baixadas
@@ -401,18 +411,3 @@ def cadastrar_pergunta():
                 st.error(f"Erro ao adicionar pergunta: {str(e)}")
         else:
             st.warning("Por favor, preencha todos os campos.")
-# Adicionar na sidebar, antes do conteúdo principal
-# Colocar após a linha do rodapé da sidebar (aproximadamente linha 97)
-
-# Adicionar botões na sidebar
-st.sidebar.write('---')
-# Remover estas linhas (aproximadamente linhas 410-413)
-# with col2:
-#     if st.sidebar.button('Cadastrar Novo Fornecedor', key='cadastrar_fornecedor'):
-#         cadastrar_fornecedor()
-# 
-# # Adicionar na tab2 (Perguntas Cadastradas), após a seleção do fornecedor
-# if fornecedor_selecionado:
-#     # Adicionar botão para cadastrar nova pergunta
-#     if st.sidebar.button('Cadastrar Nova Pergunta', key='cadastrar_pergunta'):
-#         cadastrar_pergunta()
