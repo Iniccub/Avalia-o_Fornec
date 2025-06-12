@@ -401,13 +401,18 @@ def cadastrar_pergunta():
                 st.error(f"Erro ao adicionar pergunta: {str(e)}")
         else:
             st.warning("Por favor, preencha todos os campos.")
-# Adicionar na tab1 (Fornecedores Cadastrados), após os botões de ação existentes
-with col2:
-    if st.sidebar.button('Cadastrar Novo Fornecedor', key='cadastrar_fornecedor'):
-        cadastrar_fornecedor()
+# Adicionar na sidebar, antes do conteúdo principal
+# Colocar após a linha do rodapé da sidebar (aproximadamente linha 97)
 
-# Adicionar na tab2 (Perguntas Cadastradas), após a seleção do fornecedor
-if fornecedor_selecionado:
-    # Adicionar botão para cadastrar nova pergunta
-    if st.sidebar.button('Cadastrar Nova Pergunta', key='cadastrar_pergunta'):
-        cadastrar_pergunta()
+# Adicionar botões na sidebar
+st.sidebar.write('---')
+# Remover estas linhas (aproximadamente linhas 410-413)
+# with col2:
+#     if st.sidebar.button('Cadastrar Novo Fornecedor', key='cadastrar_fornecedor'):
+#         cadastrar_fornecedor()
+# 
+# # Adicionar na tab2 (Perguntas Cadastradas), após a seleção do fornecedor
+# if fornecedor_selecionado:
+#     # Adicionar botão para cadastrar nova pergunta
+#     if st.sidebar.button('Cadastrar Nova Pergunta', key='cadastrar_pergunta'):
+#         cadastrar_pergunta()
