@@ -174,19 +174,18 @@ with tab1:
         with st.form(key='edit_fornecedor_form'):
             st.subheader(f'Editar Fornecedor: {st.session_state.editing_fornecedor}')
             novo_nome = st.text_input('Novo nome do fornecedor', value=st.session_state.editing_fornecedor)
-            # Modificar esta linha
-            # Filtrar valores default para garantir que existam nas opções
-            # Verificar se editing_unidades existe no session_state
+            
+            # Buscar todas as unidades disponíveis do MongoDB
+            todas_unidades = unidades_module.get_unidades()
+            
+            # Usar as unidades do fornecedor que está sendo editado como valores padrão
             valores_default_validos = []
             if 'editing_unidades' in st.session_state:
-                valores_default_validos = [
-                    unidade for unidade in st.session_state.editing_unidades 
-                    if unidade in unidades
-                ]
+                valores_default_validos = st.session_state.editing_unidades
             
             novas_unidades = st.multiselect(
                 'Unidades', 
-                options=unidades, 
+                options=todas_unidades, 
                 default=valores_default_validos
             )
             
@@ -343,7 +342,10 @@ def salvar_fornecedores(fornecedor, unidades_selecionadas):
 def cadastrar_fornecedor():
     st.subheader("Cadastro de Novo Fornecedor")
     novo_fornecedor = st.text_input('Nome do fornecedor', key="cadastro_novo_fornecedor")
-    unidades_selecionadas = st.multiselect("Selecione as unidades", options=unidades, key="cadastro_unidades_select")
+    
+    # Buscar unidades diretamente do MongoDB usando a função do módulo unidades
+    unidades_disponiveis = unidades_module.get_unidades()
+    unidades_selecionadas = st.multiselect("Selecione as unidades", options=unidades_disponiveis, key="cadastro_unidades_select")
 
     if st.button("Salvar", key="cadastro_salvar_fornecedor"):
         novo_fornecedor = novo_fornecedor.strip()
