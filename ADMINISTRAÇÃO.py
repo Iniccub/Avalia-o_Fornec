@@ -71,6 +71,12 @@ meses_abrev = {
 # Formatar os meses para exibição
 meses = [f"{meses_abrev[data.split('/')[1]]}/{data.split('/')[2][-2:]}" for data in meses_raw]
 
+# Obter o mês atual e o mês anterior para pré-seleção
+import datetime
+mes_atual = datetime.datetime.now().month
+mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
+# Ajustar o índice para a lista de meses (índice começa em 0, meses começam em 1)
+indice_mes_anterior = mes_anterior - 1
 # Opções de respostas
 opcoes = ['Atende Totalmente', 'Atende Parcialmente', 'Não Atende', 'Não se Aplica']
 
@@ -153,7 +159,7 @@ st.sidebar.write('---')
 
 # Sidebar, Caixas de seleção da unidade, período e fornecedor
 unidade = st.sidebar.selectbox('Selecione a unidade', index=None, options=unidades, placeholder='Escolha a unidade')
-periodo = st.sidebar.selectbox('Selecione o período avaliado', index=None, options=meses, placeholder='Defina o período de avaliação')
+periodo = st.sidebar.selectbox('Selecione o período avaliado', index=indice_mes_anterior, options=meses, placeholder='Defina o período de avaliação')
 
 # Filtrar fornecedores baseado na unidade selecionada
 if unidade:
