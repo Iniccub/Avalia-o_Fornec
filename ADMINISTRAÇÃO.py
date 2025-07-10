@@ -306,6 +306,19 @@ if fornecedor and unidade and periodo:
                     'Data_Avaliacao': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
                 })
                 
+                # Salvar no MongoDB (coleção avaliacoes_adm)
+                try:
+                    db = get_database()
+                    collection = db["avaliacoes_adm"]
+                    
+                    # Converter DataFrame para dicionário e inserir no MongoDB
+                    avaliacao_dict = df_respostas.to_dict('records')
+                    collection.insert_many(avaliacao_dict)
+                    
+                    st.success("Avaliação salva com sucesso no MongoDB!")
+                except Exception as e:
+                    st.error(f"Erro ao salvar no MongoDB: {str(e)}")
+                
                 # Formatar nome do arquivo
                 nome_fornecedor = "".join(x for x in fornecedor.replace(' ', '_') if x.isalnum() or x in ['_', '-'])
                 nome_periodo = periodo.replace('/', '-')
