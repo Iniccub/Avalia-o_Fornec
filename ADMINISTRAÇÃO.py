@@ -48,11 +48,11 @@ try:
         raise Exception("Dados vazios retornados do MongoDB")
         
     # Adicionar mensagem de sucesso
-    st.success("Dados carregados com sucesso do MongoDB")
+    st.success("Dados carregados com sucesso do Banco de Dados")
     
 except Exception as e:
     # Fallback para os dados originais apenas se houver erro
-    st.error(f"Erro ao conectar com MongoDB: {str(e)}. Usando dados locais como fallback.")
+    st.error(f"Erro ao conectar com o Banco de Dados: {str(e)}. Usando dados locais como fallback.")
     fornecedores_por_unidade = getattr(fornecedores_module, 'fornecedores_por_unidade', {})
     unidades = getattr(unidades_module, 'unidades', [])
     perguntas_por_fornecedor = getattr(perguntas_module, 'perguntas_por_fornecedor', {})
