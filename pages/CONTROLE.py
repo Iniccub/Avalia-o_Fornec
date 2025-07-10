@@ -232,8 +232,18 @@ if not df_filtrado.empty:
     else:
         df_exibicao = df_filtrado[['Fornecedor', 'Unidade', 'Período', 'Origem']]
     
-    # Exibir tabela com os resultados
-    st.dataframe(df_exibicao, use_container_width=True)
+    # Função para colorir as linhas com base na origem
+    def highlight_origem(df):
+        # Criar um DataFrame vazio com o mesmo formato do df_exibicao
+        styles = pd.DataFrame('', index=df.index, columns=df.columns)
+        # Aplicar estilo azul para linhas com origem ADMINISTRAÇÃO
+        mask = df['Origem'] == 'ADMINISTRAÇÃO'
+        for col in df.columns:
+            styles.loc[mask, col] = 'background-color: #E6F3FF; color: #104D73;'
+        return styles
+    
+    # Exibir tabela com os resultados e aplicar estilo
+    st.dataframe(df_exibicao.style.apply(highlight_origem, axis=None), use_container_width=True)
     
     # Mostrar contagem
     st.info(f"{len(df_filtrado)} avaliações encontradas")
