@@ -54,7 +54,7 @@ st.markdown(
 
 st.write('---')
 
-# Função para obter avaliações do MongoDB
+# Função para obter avaliações do MongoDB (coleção avaliacoes)
 def get_avaliacoes_mongodb():
     try:
         db = get_database()
@@ -72,10 +72,31 @@ def get_avaliacoes_mongodb():
         else:
             return pd.DataFrame()
     except Exception as e:
-        st.error(f"Erro ao consultar MongoDB: {str(e)}")
+        st.error(f"Erro ao consultar MongoDB (avaliacoes): {str(e)}")
         return pd.DataFrame()
 
-# Função para excluir avaliações do MongoDB
+# Função para obter avaliações do MongoDB (coleção avaliacoes_adm)
+def get_avaliacoes_adm_mongodb():
+    try:
+        db = get_database()
+        collection = db["avaliacoes_adm"]
+        
+        # Buscar todas as avaliações
+        avaliacoes = list(collection.find({}))
+        
+        if avaliacoes:
+            df = pd.DataFrame(avaliacoes)
+            # Remover o campo _id que é específico do MongoDB
+            if '_id' in df.columns:
+                df = df.drop('_id', axis=1)
+            return df
+        else:
+            return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Erro ao consultar MongoDB (avaliacoes_adm): {str(e)}")
+        return pd.DataFrame()
+
+# Função para excluir avaliações do MongoDB (coleção avaliacoes)
 def excluir_avaliacoes(registros_para_excluir):
     try:
         db = get_database()
@@ -100,16 +121,59 @@ def excluir_avaliacoes(registros_para_excluir):
         st.error(f"Erro ao excluir avaliações: {str(e)}")
         return 0
 
-# Obter avaliações do MongoDB
+# Função para excluir avaliações do MongoDB (coleção avaliacoes_adm)
+def excluir_avaliacoes_adm(registros_para_excluir):
+    try:
+        db = get_database()
+        collection = db["avaliacoes_adm"]
+        
+        excluidos = 0
+        for registro in registros_para_excluir:
+            # Criar filtro para encontrar o registro exato
+            filtro = {
+                "Fornecedor": registro["Fornecedor"],
+                "Unidade": registro["Unidade"],
+                "Período": registro["Período"],
+                "Data_Avaliacao": registro["Data_Avaliacao"]
+            }
+            
+            # Excluir o registro
+            resultado = collection.delete_many(filtro)
+            excluidos += resultado.deleted_count
+        
+        return excluidos
+    except Exception as e:
+        st.error(f"Erro ao excluir avaliações ADM: {str(e)}")
+        return 0
+
+# Obter avaliações do MongoDB (ambas as coleções)
 avaliacoes_df = get_avaliacoes_mongodb()
+avaliacoes_adm_df = get_avaliacoes_adm_mongodb()
+
+# Combinar os DataFrames se ambos não estiverem vazios
+if not avaliacoes_df.empty and not avaliacoes_adm_df.empty:
+    # Adicionar coluna para identificar a origem
+    avaliacoes_df['Origem'] = 'SUPRIMENTOS'
+    avaliacoes_adm_df['Origem'] = 'ADMINISTRAÇÃO'
+    
+    # Concatenar os DataFrames
+    todas_avaliacoes_df = pd.concat([avaliacoes_df, avaliacoes_adm_df], ignore_index=True)
+elif not avaliacoes_df.empty:
+    avaliacoes_df['Origem'] = 'SUPRIMENTOS'
+    todas_avaliacoes_df = avaliacoes_df
+elif not avaliacoes_adm_df.empty:
+    avaliacoes_adm_df['Origem'] = 'ADMINISTRAÇÃO'
+    todas_avaliacoes_df = avaliacoes_adm_df
+else:
+    todas_avaliacoes_df = pd.DataFrame(columns=['Fornecedor', 'Unidade', 'Período', 'Data_Avaliacao', 'Origem'])
 
 # Criar um DataFrame para armazenar as informações de controle
-if not avaliacoes_df.empty:
-    # Agrupar por Fornecedor, Unidade e Período para obter avaliações únicas
-    controle_df = avaliacoes_df.drop_duplicates(subset=['Fornecedor', 'Unidade', 'Período'])
+if not todas_avaliacoes_df.empty:
+    # Agrupar por Fornecedor, Unidade, Período e Origem para obter avaliações únicas
+    controle_df = todas_avaliacoes_df.drop_duplicates(subset=['Fornecedor', 'Unidade', 'Período', 'Origem'])
     
     # Selecionar apenas as colunas relevantes
-    controle_df = controle_df[['Fornecedor', 'Unidade', 'Período', 'Data_Avaliacao']]
+    controle_df = controle_df[['Fornecedor', 'Unidade', 'Período', 'Data_Avaliacao', 'Origem']]
     
     # Ordenar por data de avaliação (mais recente primeiro)
     if 'Data_Avaliacao' in controle_df.columns:
@@ -117,11 +181,11 @@ if not avaliacoes_df.empty:
         controle_df = controle_df.sort_values('Data_Avaliacao', ascending=False)
 else:
     # Criar DataFrame vazio se não houver avaliações
-    controle_df = pd.DataFrame(columns=['Fornecedor', 'Unidade', 'Período', 'Data_Avaliacao'])
+    controle_df = pd.DataFrame(columns=['Fornecedor', 'Unidade', 'Período', 'Data_Avaliacao', 'Origem'])
 
 # Interface de usuário para filtros
 st.subheader("Filtros")
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     # Obter lista única de fornecedores das avaliações
@@ -138,6 +202,11 @@ with col3:
     periodos_lista = ['Todos'] + (controle_df['Período'].unique().tolist() if not controle_df.empty else [])
     periodo_filtro = st.selectbox("Período", options=periodos_lista)
 
+with col4:
+    # Filtro por origem
+    origens_lista = ['Todas', 'SUPRIMENTOS', 'ADMINISTRAÇÃO']
+    origem_filtro = st.selectbox("Origem", options=origens_lista)
+
 # Aplicar filtros
 df_filtrado = controle_df.copy()
 
@@ -150,15 +219,18 @@ if unidade_filtro != 'Todas':
 if periodo_filtro != 'Todos':
     df_filtrado = df_filtrado[df_filtrado['Período'] == periodo_filtro]
 
+if origem_filtro != 'Todas':
+    df_filtrado = df_filtrado[df_filtrado['Origem'] == origem_filtro]
+
 # Exibir resultados
 st.subheader("Avaliações Realizadas")
 if not df_filtrado.empty:
     # Formatar a data para exibição
     if 'Data_Avaliacao' in df_filtrado.columns:
         df_filtrado['Data da Avaliação'] = df_filtrado['Data_Avaliacao'].dt.strftime('%d/%m/%Y %H:%M')
-        df_exibicao = df_filtrado[['Fornecedor', 'Unidade', 'Período', 'Data da Avaliação']]
+        df_exibicao = df_filtrado[['Fornecedor', 'Unidade', 'Período', 'Data da Avaliação', 'Origem']]
     else:
-        df_exibicao = df_filtrado[['Fornecedor', 'Unidade', 'Período']]
+        df_exibicao = df_filtrado[['Fornecedor', 'Unidade', 'Período', 'Origem']]
     
     # Exibir tabela com os resultados
     st.dataframe(df_exibicao, use_container_width=True)
@@ -179,7 +251,7 @@ if not df_filtrado.empty:
     
     with col1:
         # Adicionar multiselect para escolher registros a serem excluídos
-        opcoes = [f"{row['Fornecedor']} - {row['Unidade']} - {row['Período']} ({row['Data da Avaliação']})" for _, row in df_exibicao.iterrows()]
+        opcoes = [f"{row['Fornecedor']} - {row['Unidade']} - {row['Período']} ({row['Data da Avaliação']}) - {row['Origem']}" for _, row in df_exibicao.iterrows()]
         indices_selecionados = st.multiselect(
             "Selecione as avaliações que deseja excluir:",
             options=range(len(opcoes)),
@@ -198,10 +270,18 @@ if not df_filtrado.empty:
                 col1, col2 = st.columns(2)
                 with col1:
                     if st.button("Sim, excluir", type="primary"):
-                        # Excluir registros
-                        num_excluidos = excluir_avaliacoes(st.session_state.registros_selecionados)
-                        if num_excluidos > 0:
-                            st.success(f"{num_excluidos} avaliações excluídas com sucesso!")
+                        # Separar registros por origem
+                        registros_sup = [r for r in st.session_state.registros_selecionados if r.get('Origem') == 'SUPRIMENTOS']
+                        registros_adm = [r for r in st.session_state.registros_selecionados if r.get('Origem') == 'ADMINISTRAÇÃO']
+                        
+                        # Excluir registros de cada coleção
+                        num_excluidos_sup = excluir_avaliacoes(registros_sup) if registros_sup else 0
+                        num_excluidos_adm = excluir_avaliacoes_adm(registros_adm) if registros_adm else 0
+                        
+                        total_excluidos = num_excluidos_sup + num_excluidos_adm
+                        
+                        if total_excluidos > 0:
+                            st.success(f"{total_excluidos} avaliações excluídas com sucesso!")
                             # Limpar seleção
                             st.session_state.registros_selecionados = []
                             # Recarregar a página para atualizar os dados
@@ -218,8 +298,7 @@ else:
 
 # Informações adicionais
 st.info("""
-- Esta página exibe apenas as avaliações salvas no MongoDB (realizadas através da página SUPRIMENTOS).
-- As avaliações realizadas através da página ADMINISTRAÇÃO não são salvas no MongoDB, apenas são gerados arquivos Excel para download.
+- Esta página exibe as avaliações salvas no MongoDB das coleções "avaliacoes" (SUPRIMENTOS) e "avaliacoes_adm" (ADMINISTRAÇÃO).
 - Para um controle completo, recomenda-se salvar todas as avaliações no MongoDB.
 """)
 
