@@ -220,6 +220,10 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# Exibir o período selecionado abaixo do título
+if periodo:
+    st.markdown(f"<h3 style='text-align: left; font-family: Open Sauce; color: #104D73;'>Período selecionado: {periodo}</h3>", unsafe_allow_html=True)
+
 st.write('---')
 
 # Subtitulo
