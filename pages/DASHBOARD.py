@@ -120,9 +120,13 @@ if not df.empty:
             
             # Criar contagem de respostas por fornecedor
             contagem_por_fornecedor = df_filtrado.groupby(['Resposta', 'Fornecedor']).size().reset_index(name='count')
-            contagem_por_fornecedor_texto = contagem_por_fornecedor.groupby('Resposta').apply(
-                lambda x: '<br>'.join(f'{row["Fornecedor"]}: {row["count"]}' for _, row in x.iterrows())
-            ).to_dict()
+            
+            # Preparar textos customizados para cada fatia
+            textos_customizados = []
+            for resposta in contagem_respostas.index:
+                fornecedores_texto = contagem_por_fornecedor[contagem_por_fornecedor['Resposta'] == resposta]
+                texto = '<br>'.join(f'{row["Fornecedor"]}: {row["count"]}' for _, row in fornecedores_texto.iterrows())
+                textos_customizados.append(texto)
 
             # Criar gráfico de pizza com informações detalhadas
             fig = px.pie(
@@ -138,8 +142,8 @@ if not df.empty:
             fig.update_traces(
                 pull=[0.1 if resposta == 'Atende Totalmente' else 0.05 if resposta == 'Atende Parcialmente' else 0 for resposta in contagem_respostas.index],
                 textposition='inside',
-                texttemplate='%{label}<br>%{percent}<br>' + 
-                            [contagem_por_fornecedor_texto.get(label, '') for label in contagem_respostas.index],
+                text=[f'{label}<br>{val/sum(contagem_respostas.values):.1%}<br>{texto}' 
+                      for label, val, texto in zip(contagem_respostas.index, contagem_respostas.values, textos_customizados)],
                 textinfo='text'
             )
             
