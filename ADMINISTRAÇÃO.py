@@ -60,7 +60,7 @@ except Exception as e:
 pages = {
     "AVALIAÇÕES": [
         st.page("ADMINISTRAÇÃO.py", title="Avaliações ADM"), 
-        st.page(SUPRIMENTOS.py, title="Avaliações SUPRIMENTOS")
+        st.page("SUPRIMENTOS.py", title="Avaliações SUPRIMENTOS")
     ],
     "SUPPORTE": [
         st.page("BACKUP.py", title="1 - BACKUP"), 
