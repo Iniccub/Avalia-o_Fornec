@@ -70,10 +70,6 @@ pages = {
     ]
 }
 
-pg = st.navigation(pages)
-pg.run()
-
-
 # Listas fixas
 meses_raw = ['31/01/2025', '28/02/2025', '31/03/2025', '30/04/2025', '31/05/2025', '30/06/2025', '31/07/2025', '31/08/2025',
          '30/09/2025', '31/10/2025', '30/11/2025', '31/12/2025']
@@ -432,3 +428,6 @@ for file in required_files:
     if not os.path.exists(file):
         st.error(f"Arquivo {file} não encontrado. Por favor, verifique se todos os arquivos necessários estão presentes.")
         st.stop()
+
+pg = st.navigation(pages)
+pg.run()
