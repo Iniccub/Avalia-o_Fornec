@@ -426,7 +426,7 @@ pages = {
         st.Page("BACKUP.py", title="4 - BACKUP"), 
         st.Page("CONTROLE.py", title="2 - Controle"), 
         st.Page("GESTAO.py", title="3 - Gestão"), 
-        st.Page("DASHBOARD.py", title="1 - Dashboard", default=True)
+        st.Page("DASHBOARD.py", title="1 - Dashboard")
     ]
 }
 
