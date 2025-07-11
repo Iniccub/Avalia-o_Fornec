@@ -58,10 +58,16 @@ except Exception as e:
     perguntas_por_fornecedor = getattr(perguntas_module, 'perguntas_por_fornecedor', {})
 
 pages = {
-    "AVALIAÇÕES": 
-        [st.page(ADMINISTRAÇÃO.py, title="Avaliações ADM"), st.page(SUPRIMENTOS.py, title="Avaliações SUPRIMENTOS")],
-    "SUPPORTE":
-        [st.page(BACKUP.py, title="1 - BACKUP"), st.page(CONTROLE.py, title="2 - Controle"), st.page(GESTAO.py, title="3 - Gestão"), st.page(DASHBOARD.py, title="4 - Dashboard")]
+    "AVALIAÇÕES": [
+        st.page("ADMINISTRAÇÃO.py", title="Avaliações ADM"), 
+        st.page(SUPRIMENTOS.py, title="Avaliações SUPRIMENTOS")
+    ],
+    "SUPPORTE": [
+        st.page("BACKUP.py", title="1 - BACKUP"), 
+        st.page("CONTROLE.py", title="2 - Controle"), 
+        st.page("GESTAO.py", title="3 - Gestão"), 
+        st.page("DASHBOARD.py", title="4 - Dashboard")
+    ]
 }
 
 pg = st.navigation(pages)
