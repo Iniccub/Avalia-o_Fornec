@@ -118,21 +118,29 @@ if not df.empty:
                 'Não se Aplica': 'gray'
             }
             
-            # Criar gráfico de pizza
+            # Criar contagem de respostas por fornecedor
+            contagem_por_fornecedor = df_filtrado.groupby(['Resposta', 'Fornecedor']).size().reset_index(name='count')
+            contagem_por_fornecedor_texto = contagem_por_fornecedor.groupby('Resposta').apply(
+                lambda x: '<br>'.join(f'{row["Fornecedor"]}: {row["count"]}' for _, row in x.iterrows())
+            ).to_dict()
+
+            # Criar gráfico de pizza com informações detalhadas
             fig = px.pie(
                 values=contagem_respostas.values,
                 names=contagem_respostas.index,
                 title='Distribuição de Respostas',
                 color=contagem_respostas.index,
                 color_discrete_map=cores,
-                hole=0.3  # Opcional: criar efeito donut
+                hole=0.3
             )
             
-            # Configurar a explosão das fatias
+            # Configurar a explosão das fatias e texto customizado
             fig.update_traces(
                 pull=[0.1 if resposta == 'Atende Totalmente' else 0.05 if resposta == 'Atende Parcialmente' else 0 for resposta in contagem_respostas.index],
-                textposition='inside',  # Posiciona o texto dentro das fatias
-                textinfo='percent+label'  # Mostra percentual e rótulo
+                textposition='inside',
+                texttemplate='%{label}<br>%{percent}<br>' + 
+                            [contagem_por_fornecedor_texto.get(label, '') for label in contagem_respostas.index],
+                textinfo='text'
             )
             
             st.plotly_chart(fig, use_container_width=True)
