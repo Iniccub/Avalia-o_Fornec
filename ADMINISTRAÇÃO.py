@@ -59,14 +59,14 @@ except Exception as e:
 
 pages = {
     "AVALIAÇÕES": [
-        st.page("ADMINISTRAÇÃO.py", title="Avaliações ADM"), 
-        st.page("SUPRIMENTOS.py", title="Avaliações SUPRIMENTOS")
+        st.Page("ADMINISTRAÇÃO.py", title="Avaliações ADM"), 
+        st.Page("SUPRIMENTOS.py", title="Avaliações SUPRIMENTOS")
     ],
     "SUPPORTE": [
-        st.page("BACKUP.py", title="1 - BACKUP"), 
-        st.page("CONTROLE.py", title="2 - Controle"), 
-        st.page("GESTAO.py", title="3 - Gestão"), 
-        st.page("DASHBOARD.py", title="4 - Dashboard")
+        st.Page("BACKUP.py", title="1 - BACKUP"), 
+        st.Page("CONTROLE.py", title="2 - Controle"), 
+        st.Page("GESTAO.py", title="3 - Gestão"), 
+        st.Page("DASHBOARD.py", title="4 - Dashboard")
     ]
 }
 
