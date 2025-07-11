@@ -415,21 +415,3 @@ for file in required_files:
     if not os.path.exists(file):
         st.error(f"Arquivo {file} não encontrado. Por favor, verifique se todos os arquivos necessários estão presentes.")
         st.stop()
-
-# Criação das páginas
-pages = {
-    "AVALIAÇÕES": [
-        st.Page("ADMINISTRAÇÃO.py", title="Avaliações ADM", default=True), 
-        st.Page("SUPRIMENTOS.py", title="Avaliações SUPRIMENTOS")
-    ],
-    "SUPORTE": [
-        st.Page("BACKUP.py", title="4 - BACKUP"), 
-        st.Page("CONTROLE.py", title="2 - Controle"), 
-        st.Page("GESTAO.py", title="3 - Gestão"), 
-        st.Page("DASHBOARD.py", title="1 - Dashboard")
-    ]
-}
-
-# Criação da barra de navegação
-pg = st.navigation(pages)
-pg.run()
