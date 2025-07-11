@@ -57,6 +57,17 @@ except Exception as e:
     unidades = getattr(unidades_module, 'unidades', [])
     perguntas_por_fornecedor = getattr(perguntas_module, 'perguntas_por_fornecedor', {})
 
+pages = {
+    "AVALIAÇÕES": 
+        [st.page(ADMINISTRAÇÃO.py, title="Avaliações ADM"), st.page(SUPRIMENTOS.py, title="Avaliações SUPRIMENTOS")],
+    "SUPPORTE":
+        [st.page(BACKUP.py, title="1 - BACKUP"), st.page(CONTROLE.py, title="2 - Controle"), st.page(GESTAO.py, title="3 - Gestão"), st.page(DASHBOARD.py, title="4 - Dashboard")]
+}
+
+pg = st.navigation(pages)
+pg.run()
+
+
 # Listas fixas
 meses_raw = ['31/01/2025', '28/02/2025', '31/03/2025', '30/04/2025', '31/05/2025', '30/06/2025', '31/07/2025', '31/08/2025',
          '30/09/2025', '31/10/2025', '30/11/2025', '31/12/2025']
