@@ -57,19 +57,6 @@ except Exception as e:
     unidades = getattr(unidades_module, 'unidades', [])
     perguntas_por_fornecedor = getattr(perguntas_module, 'perguntas_por_fornecedor', {})
 
-pages = {
-    "AVALIAÇÕES": [
-        st.Page("ADMINISTRAÇÃO.py", title="Avaliações ADM", default=True), 
-        st.Page("SUPRIMENTOS.py", title="Avaliações SUPRIMENTOS")
-    ],
-    "SUPORTE": [
-        st.Page("BACKUP.py", title="4 - BACKUP"), 
-        st.Page("CONTROLE.py", title="2 - Controle"), 
-        st.Page("GESTAO.py", title="3 - Gestão"), 
-        st.Page("DASHBOARD.py", title="1 - Dashboard", default=True)
-    ]
-}
-
 # Listas fixas
 meses_raw = ['31/01/2025', '28/02/2025', '31/03/2025', '30/04/2025', '31/05/2025', '30/06/2025', '31/07/2025', '31/08/2025',
          '30/09/2025', '31/10/2025', '30/11/2025', '31/12/2025']
@@ -429,5 +416,20 @@ for file in required_files:
         st.error(f"Arquivo {file} não encontrado. Por favor, verifique se todos os arquivos necessários estão presentes.")
         st.stop()
 
+# Criação das páginas
+pages = {
+    "AVALIAÇÕES": [
+        st.Page("ADMINISTRAÇÃO.py", title="Avaliações ADM", default=True), 
+        st.Page("SUPRIMENTOS.py", title="Avaliações SUPRIMENTOS")
+    ],
+    "SUPORTE": [
+        st.Page("BACKUP.py", title="4 - BACKUP"), 
+        st.Page("CONTROLE.py", title="2 - Controle"), 
+        st.Page("GESTAO.py", title="3 - Gestão"), 
+        st.Page("DASHBOARD.py", title="1 - Dashboard", default=True)
+    ]
+}
+
+# Criação da barra de navegação
 pg = st.navigation(pages)
 pg.run()
