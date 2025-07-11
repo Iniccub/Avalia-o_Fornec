@@ -62,13 +62,16 @@ pages = {
         st.Page("ADMINISTRAÇÃO.py", title="Avaliações ADM"), 
         st.Page("SUPRIMENTOS.py", title="Avaliações SUPRIMENTOS")
     ],
-    "SUPPORTE": [
-        st.Page("BACKUP.py", title="1 - BACKUP"), 
+    "SUPORTE": [
+        st.Page("BACKUP.py", title="4 - BACKUP"), 
         st.Page("CONTROLE.py", title="2 - Controle"), 
         st.Page("GESTAO.py", title="3 - Gestão"), 
-        st.Page("DASHBOARD.py", title="4 - Dashboard")
+        st.Page("DASHBOARD.py", title="1 - Dashboard")
     ]
 }
+
+pg = st.navigation(pages)
+pg.run()
 
 
 # Listas fixas
