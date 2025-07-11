@@ -124,7 +124,15 @@ if not df.empty:
                 names=contagem_respostas.index,
                 title='Distribuição de Respostas',
                 color=contagem_respostas.index,
-                color_discrete_map=cores
+                color_discrete_map=cores,
+                hole=0.3  # Opcional: criar efeito donut
+            )
+            
+            # Configurar a explosão das fatias
+            fig.update_traces(
+                pull=[0.1 if resposta == 'Atende Totalmente' else 0.05 if resposta == 'Atende Parcialmente' else 0 for resposta in contagem_respostas.index],
+                textposition='inside',  # Posiciona o texto dentro das fatias
+                textinfo='percent+label'  # Mostra percentual e rótulo
             )
             
             st.plotly_chart(fig, use_container_width=True)
