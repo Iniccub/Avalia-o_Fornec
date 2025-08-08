@@ -290,7 +290,7 @@ if fornecedor and unidade and periodo:
         st.session_state.output = None
     
     # Botão unificado para salvar no MongoDB e no SharePoint
-    if st.sidebar.button('Salvar pesquisa'):
+    if st.sidebar.button('Enviar pesquisa'):
         try:
             if None in respostas:
                 st.warning('Por favor, responda todas as perguntas antes de salvar.')
@@ -386,7 +386,7 @@ if fornecedor and unidade and periodo:
                         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                     )
                 
-                st.success(r'Avaliação realizada e enviada com SUCESSO! Obrigado.')
+                st.success(r'Avaliação realizada e enviada com SUCESSO! Obrigado. Lembre-se de clicar no botão PREENCHER NOVA PESQUISA para realizar outra avaliação')
                 # Não usar st.rerun() aqui para evitar perder a barra de progresso
         except Exception as e:
             st.error(f"Erro ao processar a solicitação: {str(e)}")
@@ -403,7 +403,8 @@ if fornecedor and unidade and periodo:
     else:
         st.warning('Por favor, selecione a unidade, o período e o fornecedor para iniciar a avaliação.')
 
-    if st.sidebar.button("Preencher nova pesquisa"):
+    if st.button("Preencher nova pesquisa", icon="🔄", type="primary"):
+
         streamlit_js_eval(js_expressions='parent.window.location.reload()')
 
 # Rodapé com copyright
