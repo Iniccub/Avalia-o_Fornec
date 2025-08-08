@@ -289,12 +289,15 @@ if fornecedor and unidade and periodo:
     if 'output' not in st.session_state:
         st.session_state.output = None
     
-    # Substitua o bloco do botão 'Salvar pesquisa' por este código
+    # Botão unificado para salvar no MongoDB e no SharePoint
     if st.sidebar.button('Salvar pesquisa'):
         try:
             if None in respostas:
                 st.warning('Por favor, responda todas as perguntas antes de salvar.')
             else:
+                # Criar barra de progresso
+                progress_bar = st.progress(0, text="Iniciando processo de salvamento...")
+                
                 # Criar DataFrame com as respostas
                 df_respostas = pd.DataFrame({
                     'Unidade': unidade,
@@ -306,6 +309,9 @@ if fornecedor and unidade and periodo:
                     'Data_Avaliacao': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
                 })
                 
+                # Atualizar progresso - 25%
+                progress_bar.progress(25, text="Salvando no Banco de dados...")
+                
                 # Salvar no MongoDB (coleção avaliacoes_adm)
                 try:
                     db = get_database()
@@ -315,9 +321,12 @@ if fornecedor and unidade and periodo:
                     avaliacao_dict = df_respostas.to_dict('records')
                     collection.insert_many(avaliacao_dict)
                     
-                    st.success("Avaliação salva com sucesso no MongoDB!")
+                    # Atualizar progresso - 50%
+                    progress_bar.progress(50, text="Preparando arquivo Excel...")
                 except Exception as e:
                     st.error(f"Erro ao salvar no MongoDB: {str(e)}")
+                    progress_bar.progress(100, text="Erro ao salvar no banco de dados")
+
                 
                 # Formatar nome do arquivo
                 nome_fornecedor = "".join(x for x in fornecedor.replace(' ', '_') if x.isalnum() or x in ['_', '-'])
@@ -337,52 +346,60 @@ if fornecedor and unidade and periodo:
                 st.session_state.nome_arquivo = nome_arquivo
                 st.session_state.output = output
                 
-                # Recarregar a página para mostrar os botões de download e SharePoint
-                st.rerun()
-        except Exception as e:
-            st.error(f"Erro ao salvar arquivo: {str(e)}")
-    
-    # Após o bloco do botão 'Salvar pesquisa', adicione este código para os botões de download e SharePoint
-    if st.session_state.pesquisa_salva:
-        # Cria um botão de download no Streamlit que permite escolher onde salvar
-        st.download_button(
-            label='Clique aqui para baixar o arquivo Excel com as respostas',
-            data=st.session_state.output,
-            file_name=st.session_state.nome_arquivo,
-            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.success('Respostas processadas com sucesso! Clique no botão acima para baixar o arquivo.')
-        
-        with col2:
-            if st.button('Salvar no SharePoint'):
+                # Atualizar progresso - 75%
+                progress_bar.progress(75, text="Enviando para o SharePoint...")
+                
+                # Fazer upload para o SharePoint
                 try:
                     # Criar uma cópia do arquivo em memória para o SharePoint
-                    output_sharepoint = st.session_state.output.getvalue()
+                    output_sharepoint = output.getvalue()
                     
                     # Definir a pasta no SharePoint onde o arquivo será salvo
                     sharepoint_folder = "Avaliacao_Fornecedores/ADM"
                     
-                    # Adicionar log para debug
-                    st.write(f"Tentando salvar arquivo: {st.session_state.nome_arquivo} na pasta: {sharepoint_folder}")
+                    # Usar o componente st.status para mostrar o progresso da conexão com o SharePoint
+                    with st.status("Conectando ao SharePoint...", expanded=True) as status:
+                        # Fazer upload para o SharePoint
+                        sp = SharePoint()
+                        st.write("Autenticando...")
+                        st.write("Enviando arquivo...")
+                        response = sp.upload_file(nome_arquivo, sharepoint_folder, output_sharepoint)
+                        status.update(label="Conexão com SharePoint estabelescida!", state="complete", expanded=False)
                     
-                    # Fazer upload para o SharePoint
-                    sp = SharePoint()
-                    response = sp.upload_file(st.session_state.nome_arquivo, sharepoint_folder, output_sharepoint)
-                    
-                    # Adicionar log para verificar a resposta
-                    st.write(f"Resposta do SharePoint: {response}")
-                    
-                    st.success(f'Arquivo {st.session_state.nome_arquivo} salvo com sucesso no SharePoint!')
+                    # Atualizar progresso - 100%
+                    progress_bar.progress(100, text="Processo concluído com sucesso!")
+                    #st.success(f'Arquivo {nome_arquivo} salvo com sucesso no MongoDB e no SharePoint!')
                 except Exception as e:
+                    # Em caso de erro no SharePoint, ainda permitir o download local
                     st.error(f"Erro ao salvar no SharePoint: {str(e)}")
                     # Adicionar informações detalhadas do erro
                     import traceback
                     st.error(traceback.format_exc())
-        
-        st.success(r'Caminho da pasta onde salvar o arquivo. Copie o endereço a partir daqui: \\\10.10.0.17\Dados\Administrativo e Suprimentos\GESTÃO DE FORNECEDORES\RESPOSTAS AVALIAÇÕES DE FORNECEDORES')
+                    # Atualizar progresso - 100% com mensagem de erro
+                    progress_bar.progress(100, text="Erro ao salvar no SharePoint, mas disponível para download local")
+                    
+                    # Cria um botão de download no Streamlit que permite escolher onde salvar
+                    st.download_button(
+                        label='O arquivo já foi enviado para a equipe de Suprimentos. Já está tudo certo, mas você pode baixá-lo e salvar em seus arquivos, caso queira.',
+                        data=output,
+                        file_name=nome_arquivo,
+                        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    )
+                
+                st.success(r'Avaliação realizada e enviada com SUCESSO! Obrigado.')
+                # Não usar st.rerun() aqui para evitar perder a barra de progresso
+        except Exception as e:
+            st.error(f"Erro ao processar a solicitação: {str(e)}")
+    
+    # Mostrar botão de download apenas se a pesquisa foi salva com sucesso
+    if st.session_state.pesquisa_salva:
+        # Cria um botão de download no Streamlit que permite escolher onde salvar
+        st.download_button(
+            label='O arquivo já foi enviado para a equipe de Suprimentos. Já está tudo certo, mas você pode baixá-lo e salvar em seus arquivos, caso queira. Para isso basta clicar aqui',
+            data=st.session_state.output,
+            file_name=st.session_state.nome_arquivo,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
     else:
         st.warning('Por favor, selecione a unidade, o período e o fornecedor para iniciar a avaliação.')
 
