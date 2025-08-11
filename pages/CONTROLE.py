@@ -4,8 +4,6 @@ import importlib.util
 import sys
 import os
 from datetime import datetime
-
-# Adicionar import para MongoDB
 from mongodb_config import get_database
 
 st.set_page_config(
@@ -96,56 +94,6 @@ def get_avaliacoes_adm_mongodb():
         st.error(f"Erro ao consultar MongoDB (avaliacoes_adm): {str(e)}")
         return pd.DataFrame()
 
-# Função para excluir avaliações do MongoDB (coleção avaliacoes)
-def excluir_avaliacoes(registros_para_excluir):
-    try:
-        db = get_database()
-        collection = db["avaliacoes"]
-        
-        excluidos = 0
-        for registro in registros_para_excluir:
-            # Criar filtro para encontrar o registro exato
-            filtro = {
-                "Fornecedor": registro["Fornecedor"],
-                "Unidade": registro["Unidade"],
-                "Período": registro["Período"],
-                "Data_Avaliacao": registro["Data_Avaliacao"]
-            }
-            
-            # Excluir o registro
-            resultado = collection.delete_many(filtro)
-            excluidos += resultado.deleted_count
-        
-        return excluidos
-    except Exception as e:
-        st.error(f"Erro ao excluir avaliações: {str(e)}")
-        return 0
-
-# Função para excluir avaliações do MongoDB (coleção avaliacoes_adm)
-def excluir_avaliacoes_adm(registros_para_excluir):
-    try:
-        db = get_database()
-        collection = db["avaliacoes_adm"]
-        
-        excluidos = 0
-        for registro in registros_para_excluir:
-            # Criar filtro para encontrar o registro exato
-            filtro = {
-                "Fornecedor": registro["Fornecedor"],
-                "Unidade": registro["Unidade"],
-                "Período": registro["Período"],
-                "Data_Avaliacao": registro["Data_Avaliacao"]
-            }
-            
-            # Excluir o registro
-            resultado = collection.delete_many(filtro)
-            excluidos += resultado.deleted_count
-        
-        return excluidos
-    except Exception as e:
-        st.error(f"Erro ao excluir avaliações ADM: {str(e)}")
-        return 0
-
 # Obter avaliações do MongoDB (ambas as coleções)
 avaliacoes_df = get_avaliacoes_mongodb()
 avaliacoes_adm_df = get_avaliacoes_adm_mongodb()
@@ -222,6 +170,66 @@ if periodo_filtro != 'Todos':
 if origem_filtro != 'Todas':
     df_filtrado = df_filtrado[df_filtrado['Origem'] == origem_filtro]
 
+# Função para excluir avaliação específica do MongoDB
+def excluir_avaliacao_mongodb(fornecedor, unidade, periodo, origem):
+    try:
+        db = get_database()
+        
+        # Determinar qual coleção usar baseado na origem
+        if origem == 'SUPRIMENTOS':
+            collection = db["avaliacoes"]
+        elif origem == 'ADMINISTRAÇÃO':
+            collection = db["avaliacoes_adm"]
+        else:
+            return False, "Origem inválida"
+        
+        # Criar filtro para buscar a avaliação
+        filtro = {
+            "Fornecedor": fornecedor,
+            "Unidade": unidade,
+            "Período": periodo
+        }
+        
+        # Verificar se existe algum registro com esses critérios
+        registros_encontrados = collection.count_documents(filtro)
+        
+        if registros_encontrados == 0:
+            return False, "Nenhum registro encontrado com os critérios especificados"
+        
+        # Excluir todos os registros que correspondem ao filtro
+        resultado = collection.delete_many(filtro)
+        
+        if resultado.deleted_count > 0:
+            return True, f"{resultado.deleted_count} registro(s) excluído(s) com sucesso"
+        else:
+            return False, "Nenhum registro foi excluído"
+            
+    except Exception as e:
+        return False, f"Erro ao excluir do MongoDB: {str(e)}"
+
+# Função para excluir TODAS as avaliações de uma coleção específica
+def excluir_todas_avaliacoes_colecao(nome_colecao):
+    try:
+        db = get_database()
+        collection = db[nome_colecao]
+        
+        # Contar registros antes da exclusão
+        total_registros = collection.count_documents({})
+        
+        if total_registros == 0:
+            return False, f"A coleção '{nome_colecao}' já está vazia"
+        
+        # Excluir todos os registros da coleção
+        resultado = collection.delete_many({})
+        
+        if resultado.deleted_count > 0:
+            return True, f"{resultado.deleted_count} registro(s) excluído(s) da coleção '{nome_colecao}'"
+        else:
+            return False, "Nenhum registro foi excluído"
+            
+    except Exception as e:
+        return False, f"Erro ao excluir da coleção '{nome_colecao}': {str(e)}"
+
 # Exibir resultados
 st.subheader("Avaliações Realizadas")
 if not df_filtrado.empty:
@@ -248,69 +256,120 @@ if not df_filtrado.empty:
     # Mostrar contagem
     st.info(f"{len(df_filtrado)} avaliações encontradas")
     
-    # Adicionar funcionalidade para excluir registros
-    st.subheader("Excluir Avaliações")
-    st.warning("⚠️ Atenção: A exclusão de avaliações é permanente e não pode ser desfeita.")
+    # Seção de exclusão de registros específicos
+    st.write("---")
+    st.subheader("🗑️ Excluir Avaliações Específicas")
     
-    # Inicializar estado da sessão para armazenar seleções
-    if 'registros_selecionados' not in st.session_state:
-        st.session_state.registros_selecionados = []
-    
-    # Criar colunas para organizar a interface
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        # Adicionar multiselect para escolher registros a serem excluídos
-        opcoes = [f"{row['Fornecedor']} - {row['Unidade']} - {row['Período']} ({row['Data da Avaliação']}) - {row['Origem']}" for _, row in df_exibicao.iterrows()]
-        indices_selecionados = st.multiselect(
-            "Selecione as avaliações que deseja excluir:",
-            options=range(len(opcoes)),
-            format_func=lambda x: opcoes[x]
-        )
+    # Seleção de avaliação para exclusão
+    if not df_filtrado.empty:
+        col_excluir1, col_excluir2 = st.columns([3, 1])
         
-        # Armazenar registros selecionados
-        st.session_state.registros_selecionados = [df_filtrado.iloc[i].to_dict() for i in indices_selecionados]
-    
-    with col2:
-        # Botão para confirmar exclusão
-        if st.button("Excluir Selecionados", type="primary", disabled=len(st.session_state.registros_selecionados) == 0):
-            if st.session_state.registros_selecionados:
-                # Confirmar exclusão
-                confirmacao = st.warning("Tem certeza que deseja excluir os registros selecionados?", icon="⚠️")
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("Sim, excluir", type="primary"):
-                        # Separar registros por origem
-                        registros_sup = [r for r in st.session_state.registros_selecionados if r.get('Origem') == 'SUPRIMENTOS']
-                        registros_adm = [r for r in st.session_state.registros_selecionados if r.get('Origem') == 'ADMINISTRAÇÃO']
-                        
-                        # Excluir registros de cada coleção
-                        num_excluidos_sup = excluir_avaliacoes(registros_sup) if registros_sup else 0
-                        num_excluidos_adm = excluir_avaliacoes_adm(registros_adm) if registros_adm else 0
-                        
-                        total_excluidos = num_excluidos_sup + num_excluidos_adm
-                        
-                        if total_excluidos > 0:
-                            st.success(f"{total_excluidos} avaliações excluídas com sucesso!")
-                            # Limpar seleção
-                            st.session_state.registros_selecionados = []
-                            # Recarregar a página para atualizar os dados
-                            st.rerun()
-                        else:
-                            st.error("Não foi possível excluir as avaliações selecionadas.")
-                with col2:
-                    if st.button("Cancelar"):
-                        # Limpar seleção
-                        st.session_state.registros_selecionados = []
-                        st.rerun()
+        with col_excluir1:
+            # Criar lista de opções para seleção
+            opcoes_exclusao = []
+            for index, row in df_filtrado.iterrows():
+                data_formatada = row['Data da Avaliação'] if 'Data da Avaliação' in row else 'N/A'
+                opcao = f"{row['Fornecedor']} - {row['Unidade']} - {row['Período']} - {row['Origem']} ({data_formatada})"
+                opcoes_exclusao.append((opcao, row['Fornecedor'], row['Unidade'], row['Período'], row['Origem']))
+            
+            if opcoes_exclusao:
+                avaliacao_selecionada = st.selectbox(
+                    "Selecione a avaliação para excluir:",
+                    options=range(len(opcoes_exclusao)),
+                    format_func=lambda x: opcoes_exclusao[x][0]
+                )
+        
+        with col_excluir2:
+            st.write("")
+            st.write("")
+            if st.button("🗑️ Excluir Selecionada", type="secondary"):
+                if opcoes_exclusao:
+                    _, fornecedor, unidade, periodo, origem = opcoes_exclusao[avaliacao_selecionada]
+                    
+                    # Confirmar exclusão
+                    sucesso, mensagem = excluir_avaliacao_mongodb(fornecedor, unidade, periodo, origem)
+                    
+                    if sucesso:
+                        st.success(mensagem)
+                        st.rerun()  # Recarregar a página para atualizar os dados
+                    else:
+                        st.error(mensagem)
 else:
-    st.warning("Nenhuma avaliação encontrada com os filtros selecionados.")
+    st.info("Nenhuma avaliação encontrada com os filtros aplicados.")
 
-# Informações adicionais
-st.info("""
-- Esta página exibe as avaliações salvas no MongoDB das coleções "avaliacoes" (SUPRIMENTOS) e "avaliacoes_adm" (ADMINISTRAÇÃO).
-- Para um controle completo, recomenda-se salvar todas as avaliações no MongoDB.
-""")
+# Seção de exclusão em massa
+st.write("---")
+st.subheader("⚠️ Ferramentas de Exclusão em Massa")
+st.warning("**ATENÇÃO:** As operações abaixo são irreversíveis e excluirão dados permanentemente!")
+
+col_massa1, col_massa2 = st.columns(2)
+
+with col_massa1:
+    st.write("**Excluir toda a coleção SUPRIMENTOS:**")
+    if st.button("🗑️ Excluir TODAS Avaliações SUPRIMENTOS", type="secondary"):
+        # Adicionar confirmação dupla
+        if 'confirmar_suprimentos' not in st.session_state:
+            st.session_state.confirmar_suprimentos = False
+        
+        if not st.session_state.confirmar_suprimentos:
+            st.session_state.confirmar_suprimentos = True
+            st.warning("⚠️ Clique novamente para confirmar a exclusão de TODAS as avaliações de SUPRIMENTOS")
+        else:
+            sucesso, mensagem = excluir_todas_avaliacoes_colecao("avaliacoes")
+            if sucesso:
+                st.success(mensagem)
+                st.session_state.confirmar_suprimentos = False
+                st.rerun()
+            else:
+                st.error(mensagem)
+                st.session_state.confirmar_suprimentos = False
+
+with col_massa2:
+    st.write("**Excluir toda a coleção ADMINISTRAÇÃO:**")
+    if st.button("🗑️ Excluir TODAS Avaliações ADMINISTRAÇÃO", type="secondary"):
+        # Adicionar confirmação dupla
+        if 'confirmar_administracao' not in st.session_state:
+            st.session_state.confirmar_administracao = False
+        
+        if not st.session_state.confirmar_administracao:
+            st.session_state.confirmar_administracao = True
+            st.warning("⚠️ Clique novamente para confirmar a exclusão de TODAS as avaliações de ADMINISTRAÇÃO")
+        else:
+            sucesso, mensagem = excluir_todas_avaliacoes_colecao("avaliacoes_adm")
+            if sucesso:
+                st.success(mensagem)
+                st.session_state.confirmar_administracao = False
+                st.rerun()
+            else:
+                st.error(mensagem)
+                st.session_state.confirmar_administracao = False
+
+# Botão para excluir TUDO
+st.write("---")
+st.write("**🚨 ZONA DE PERIGO - Excluir TODAS as avaliações:**")
+if st.button("🚨 EXCLUIR TUDO (SUPRIMENTOS + ADMINISTRAÇÃO)", type="secondary"):
+    # Confirmação tripla para operação crítica
+    if 'confirmar_tudo' not in st.session_state:
+        st.session_state.confirmar_tudo = 0
+    
+    st.session_state.confirmar_tudo += 1
+    
+    if st.session_state.confirmar_tudo == 1:
+        st.error("⚠️ PRIMEIRA CONFIRMAÇÃO: Clique novamente para confirmar")
+    elif st.session_state.confirmar_tudo == 2:
+        st.error("⚠️ SEGUNDA CONFIRMAÇÃO: Clique uma última vez para EXCLUIR TUDO")
+    elif st.session_state.confirmar_tudo >= 3:
+        # Excluir ambas as coleções
+        sucesso1, mensagem1 = excluir_todas_avaliacoes_colecao("avaliacoes")
+        sucesso2, mensagem2 = excluir_todas_avaliacoes_colecao("avaliacoes_adm")
+        
+        if sucesso1 or sucesso2:
+            st.success(f"Exclusão concluída:\n- {mensagem1}\n- {mensagem2}")
+        else:
+            st.error(f"Erro na exclusão:\n- {mensagem1}\n- {mensagem2}")
+        
+        st.session_state.confirmar_tudo = 0
+        st.rerun()
 
 # Rodapé com copyright
 st.sidebar.markdown("""
