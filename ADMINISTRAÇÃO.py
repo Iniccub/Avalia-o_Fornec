@@ -289,7 +289,7 @@ if fornecedor and unidade and periodo:
     if 'output' not in st.session_state:
         st.session_state.output = None
     
-    # Botão unificado para salvar no MongoDB e no SharePoint
+    # Botão unificado para salvar no MongoDB, SharePoint e reiniciar pesquisa
     if st.button('Enviar pesquisa'):
         try:
             if None in respostas:
@@ -309,8 +309,8 @@ if fornecedor and unidade and periodo:
                     'Data_Avaliacao': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
                 })
                 
-                # Atualizar progresso - 25%
-                progress_bar.progress(25, text="Salvando no Banco de dados...")
+                # Atualizar progresso - 20%
+                progress_bar.progress(20, text="Salvando no Banco de dados...")
                 
                 # Salvar no MongoDB (coleção avaliacoes_adm)
                 try:
@@ -321,12 +321,12 @@ if fornecedor and unidade and periodo:
                     avaliacao_dict = df_respostas.to_dict('records')
                     collection.insert_many(avaliacao_dict)
                     
-                    # Atualizar progresso - 50%
-                    progress_bar.progress(50, text="Preparando arquivo Excel...")
+                    # Atualizar progresso - 40%
+                    progress_bar.progress(40, text="Preparando arquivo Excel...")
                 except Exception as e:
                     st.error(f"Erro ao salvar no MongoDB: {str(e)}")
                     progress_bar.progress(100, text="Erro ao salvar no banco de dados")
-
+        
                 
                 # Formatar nome do arquivo
                 nome_fornecedor = "".join(x for x in fornecedor.replace(' ', '_') if x.isalnum() or x in ['_', '-'])
@@ -346,8 +346,8 @@ if fornecedor and unidade and periodo:
                 st.session_state.nome_arquivo = nome_arquivo
                 st.session_state.output = output
                 
-                # Atualizar progresso - 75%
-                progress_bar.progress(75, text="Enviando para o SharePoint...")
+                # Atualizar progresso - 60%
+                progress_bar.progress(60, text="Enviando para o SharePoint...")
                 
                 # Fazer upload para o SharePoint
                 try:
@@ -364,19 +364,18 @@ if fornecedor and unidade and periodo:
                         st.write("Autenticando...")
                         st.write("Enviando arquivo...")
                         response = sp.upload_file(nome_arquivo, sharepoint_folder, output_sharepoint)
-                        status.update(label="Conexão com SharePoint estabelescida!", state="complete", expanded=False)
+                        status.update(label="Conexão com SharePoint estabelecida!", state="complete", expanded=False)
                     
-                    # Atualizar progresso - 100%
-                    progress_bar.progress(100, text="Processo concluído com sucesso!")
-                    #st.success(f'Arquivo {nome_arquivo} salvo com sucesso no MongoDB e no SharePoint!')
+                    # Atualizar progresso - 80%
+                    progress_bar.progress(80, text="Finalizando processo...")
                 except Exception as e:
                     # Em caso de erro no SharePoint, ainda permitir o download local
                     st.error(f"Erro ao salvar no SharePoint: {str(e)}")
                     # Adicionar informações detalhadas do erro
                     import traceback
                     st.error(traceback.format_exc())
-                    # Atualizar progresso - 100% com mensagem de erro
-                    progress_bar.progress(100, text="Erro ao salvar no SharePoint, mas disponível para download local")
+                    # Atualizar progresso - 80% com mensagem de erro
+                    progress_bar.progress(80, text="Erro ao salvar no SharePoint, mas disponível para download local")
                     
                     # Cria um botão de download no Streamlit que permite escolher onde salvar
                     st.download_button(
@@ -386,26 +385,24 @@ if fornecedor and unidade and periodo:
                         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                     )
                 
-                st.success(r'Avaliação realizada e enviada com SUCESSO! Obrigado. Lembre-se de clicar no botão PREENCHER NOVA PESQUISA para realizar outra avaliação')
-                # Não usar st.rerun() aqui para evitar perder a barra de progresso
+                # Atualizar progresso - 100%
+                progress_bar.progress(100, text="Processo concluído! Recarregando página...")
+                
+                st.success(r'Avaliação realizada e enviada com SUCESSO! Obrigado. A página será recarregada automaticamente para uma nova avaliação.')
+                
+                # Aguardar um momento para mostrar a mensagem de sucesso
+                import time
+                time.sleep(2)
+                
+                # Recarregar a página automaticamente (função do "Preencher nova pesquisa")
+                streamlit_js_eval(js_expressions='parent.window.location.reload()')
+                
         except Exception as e:
             st.error(f"Erro ao processar a solicitação: {str(e)}")
     
-    # Mostrar botão de download apenas se a pesquisa foi salva com sucesso
-    if st.session_state.pesquisa_salva:
-        # Cria um botão de download no Streamlit que permite escolher onde salvar
-        st.download_button(
-            label='O arquivo já foi enviado para a equipe de Suprimentos. Já está tudo certo, mas você pode baixá-lo e salvar em seus arquivos, caso queira. Para isso basta clicar aqui',
-            data=st.session_state.output,
-            file_name=st.session_state.nome_arquivo,
-            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-    else:
-        st.warning('Por favor, selecione a unidade, o período e o fornecedor para iniciar a avaliação.')
-
-    if st.sidebar.button("Preencher nova pesquisa", icon="🔄", type="primary"):
-
-        streamlit_js_eval(js_expressions='parent.window.location.reload()')
+    # Remover o botão "Preencher nova pesquisa" separado, pois agora está integrado
+    # if st.sidebar.button("Preencher nova pesquisa", icon="🔄", type="primary"):
+    #     streamlit_js_eval(js_expressions='parent.window.location.reload()')
 
 # Rodapé com copyright
 st.sidebar.markdown("""
