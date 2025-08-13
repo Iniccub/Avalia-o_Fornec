@@ -290,7 +290,7 @@ if fornecedor and unidade and periodo:
         st.session_state.output = None
     
     # Botão unificado para salvar no MongoDB e no SharePoint
-    if st.sidebar.button('Enviar pesquisa'):
+    if st.button('Enviar pesquisa'):
         try:
             if None in respostas:
                 st.warning('Por favor, responda todas as perguntas antes de salvar.')
@@ -403,7 +403,7 @@ if fornecedor and unidade and periodo:
     else:
         st.warning('Por favor, selecione a unidade, o período e o fornecedor para iniciar a avaliação.')
 
-    if st.button("Preencher nova pesquisa", icon="🔄", type="primary"):
+    if st.sidebar.button("Preencher nova pesquisa", icon="🔄", type="primary"):
 
         streamlit_js_eval(js_expressions='parent.window.location.reload()')
 
