@@ -5,9 +5,168 @@ import os
 import zipfile
 import tempfile
 from io import BytesIO
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
+from datetime import datetime, timedelta
 
 # Adicionar import para SharePoint
 from Office365_api import SharePoint
+
+# Cache global para conexão SharePoint
+_sharepoint_cache = {
+    'connection': None,
+    'last_used': None,
+    'timeout': 300  # 5 minutos
+}
+
+# Lock para thread safety
+_cache_lock = threading.Lock()
+
+def get_sharepoint_connection():
+    """Obter conexão SharePoint com cache para evitar reconexões desnecessárias"""
+    with _cache_lock:
+        now = datetime.now()
+        
+        # Verificar se temos uma conexão válida em cache
+        if (_sharepoint_cache['connection'] is not None and 
+            _sharepoint_cache['last_used'] is not None and 
+            (now - _sharepoint_cache['last_used']).seconds < _sharepoint_cache['timeout']):
+            return _sharepoint_cache['connection']
+        
+        # Criar nova conexão
+        try:
+            _sharepoint_cache['connection'] = SharePoint()
+            _sharepoint_cache['last_used'] = now
+            return _sharepoint_cache['connection']
+        except Exception as e:
+            st.error(f"Erro ao conectar ao SharePoint: {str(e)}")
+            return None
+
+def download_single_file(file_info):
+    """Download de um único arquivo com tratamento de erro individual"""
+    file_obj, folder = file_info
+    try:
+        sp = get_sharepoint_connection()
+        if sp is None:
+            return None, f"Erro de conexão para {file_obj.name}"
+        
+        file_content = sp.download_file(file_obj.name, folder)
+        return {
+            'name': file_obj.name,
+            'folder': folder,
+            'content': file_content,
+            'size': len(file_content)
+        }, None
+    except Exception as e:
+        return None, f"Erro ao baixar {file_obj.name}: {str(e)}"
+
+def get_files_list_optimized(folders):
+    """Obter lista de arquivos de todas as pastas de forma otimizada"""
+    all_files = []
+    sp = get_sharepoint_connection()
+    
+    if sp is None:
+        return []
+    
+    for folder in folders:
+        try:
+            files_list = sp._get_files_list(folder)
+            if files_list:
+                for file_obj in files_list:
+                    all_files.append((file_obj, folder))
+        except Exception as e:
+            st.warning(f"Erro ao listar arquivos na pasta {folder}: {str(e)}")
+    
+    return all_files
+
+def download_sharepoint_files_optimized(folders, max_workers=3):
+    """Versão otimizada do download com processamento paralelo e indicadores de progresso"""
+    try:
+        # Obter lista de todos os arquivos primeiro
+        st.text("📋 Obtendo lista de arquivos...")
+        all_files = get_files_list_optimized(folders)
+        
+        if not all_files:
+            st.warning("Nenhum arquivo encontrado nas pastas especificadas.")
+            return None
+        
+        total_files = len(all_files)
+        st.text(f"📁 Encontrados {total_files} arquivos para download")
+        
+        # Criar arquivo ZIP em memória
+        zip_buffer = BytesIO()
+        
+        # Contadores para progresso
+        downloaded_count = 0
+        failed_count = 0
+        total_size = 0
+        
+        # Criar barra de progresso
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as zip_file:
+            # Download paralelo com ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Submeter todas as tarefas
+                future_to_file = {executor.submit(download_single_file, file_info): file_info 
+                                for file_info in all_files}
+                
+                # Processar resultados conforme completam
+                for future in as_completed(future_to_file):
+                    file_info = future_to_file[future]
+                    file_obj, folder = file_info
+                    
+                    try:
+                        result, error = future.result(timeout=30)  # Timeout de 30s por arquivo
+                        
+                        if result:
+                            # Adicionar arquivo ao ZIP
+                            zip_path = f"{folder.replace('/', '_')}/{result['name']}"
+                            zip_file.writestr(zip_path, result['content'])
+                            
+                            downloaded_count += 1
+                            total_size += result['size']
+                            
+                            # Atualizar progresso
+                            progress = downloaded_count / total_files
+                            progress_bar.progress(progress)
+                            
+                            # Formatação do tamanho
+                            size_mb = total_size / (1024 * 1024)
+                            status_text.text(
+                                f"✅ {downloaded_count}/{total_files} arquivos baixados "
+                                f"({size_mb:.1f} MB) - {result['name']}"
+                            )
+                        else:
+                            failed_count += 1
+                            st.warning(f"⚠️ {error}")
+                            
+                    except Exception as e:
+                        failed_count += 1
+                        st.warning(f"⚠️ Timeout ou erro ao processar {file_obj.name}: {str(e)}")
+        
+        # Finalizar progresso
+        progress_bar.progress(1.0)
+        
+        # Estatísticas finais
+        final_size_mb = total_size / (1024 * 1024)
+        status_text.text(
+            f"🎉 Download concluído! {downloaded_count} arquivos baixados "
+            f"({final_size_mb:.1f} MB). {failed_count} falhas."
+        )
+        
+        if downloaded_count == 0:
+            st.error("Nenhum arquivo foi baixado com sucesso.")
+            return None
+        
+        # Retornar ao início do buffer
+        zip_buffer.seek(0)
+        return zip_buffer
+        
+    except Exception as e:
+        st.error(f"Erro crítico ao criar arquivo ZIP: {str(e)}")
+        return None
 
 # Função para importar módulos dinamicamente
 def import_module(module_name, file_path):
@@ -96,26 +255,46 @@ st.sidebar.markdown("---")
 # Separador antes do botão de download
 st.sidebar.markdown("---")
 
+# Substituir o botão atual por um botão unificado
 if st.sidebar.button("📥 Baixar Avaliações do SharePoint"):
-    with st.sidebar.status("Baixando arquivos do SharePoint...", expanded=True) as status:
+    with st.sidebar.status("Preparando download...", expanded=True) as status:
         # Pastas a serem baixadas
         folders = ["Avaliacao_Fornecedores/ADM", "Avaliacao_Fornecedores/SUP"]
         
-        # Baixar arquivos
-        st.sidebar.text("Obtendo arquivos...")
-        zip_data = download_sharepoint_files(folders)
+        # Container para mostrar progresso detalhado
+        progress_container = st.sidebar.container()
+        
+        with progress_container:
+            # Baixar arquivos com versão otimizada
+            zip_data = download_sharepoint_files_optimized(folders, max_workers=3)
         
         if zip_data:
-            # Oferecer o ZIP para download
+            # Gerar nome do arquivo com timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"Avaliacoes_Fornecedores_{timestamp}.zip"
+            
+            # Botão de download
             st.sidebar.download_button(
                 label="📥 Baixar Arquivo ZIP",
-                data=zip_data,
-                file_name="Avaliacoes_Fornecedores.zip",
-                mime="application/zip"
+                data=zip_data.getvalue(),
+                file_name=filename,
+                mime="application/zip",
+                use_container_width=True,
+                help=f"Clique para baixar o arquivo ZIP com todas as avaliações"
             )
-            status.update(label="Download concluído!", state="complete")
+            
+            status.update(
+                label="✅ Download preparado! Clique no botão acima para salvar.", 
+                state="complete"
+            )
+            
+            # Informações adicionais
+            file_size_mb = len(zip_data.getvalue()) / (1024 * 1024)
+            st.sidebar.info(f"📊 Tamanho do arquivo: {file_size_mb:.1f} MB")
+            
         else:
-            status.update(label="Erro ao baixar arquivos", state="error")
+            status.update(label="❌ Erro ao preparar download", state="error")
+            st.sidebar.error("Não foi possível baixar os arquivos. Verifique a conexão com o SharePoint.")
 
 # Adicionar rodapé
 st.sidebar.markdown("---")
