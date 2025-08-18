@@ -5,6 +5,7 @@ import sys
 import os
 from datetime import datetime
 from mongodb_config import get_database
+from Office365_api import SharePoint
 
 st.set_page_config(
     page_title='Controle de Avaliações de Fornecedores',
@@ -178,8 +179,12 @@ def excluir_avaliacao_mongodb(fornecedor, unidade, periodo, origem):
         # Determinar qual coleção usar baseado na origem
         if origem == 'SUPRIMENTOS':
             collection = db["avaliacoes"]
+            sharepoint_folder = "Avaliacao_Fornecedores/SUP"
+            sufixo_arquivo = "_SUP"
         elif origem == 'ADMINISTRAÇÃO':
             collection = db["avaliacoes_adm"]
+            sharepoint_folder = "Avaliacao_Fornecedores/ADM"
+            sufixo_arquivo = ""
         else:
             return False, "Origem inválida"
         
@@ -190,22 +195,67 @@ def excluir_avaliacao_mongodb(fornecedor, unidade, periodo, origem):
             "Período": periodo
         }
         
-        # Verificar se existe algum registro com esses critérios
-        registros_encontrados = collection.count_documents(filtro)
+        # Buscar um registro para obter o período original do banco
+        registro_exemplo = collection.find_one(filtro)
         
-        if registros_encontrados == 0:
+        if not registro_exemplo:
             return False, "Nenhum registro encontrado com os critérios especificados"
         
-        # Excluir todos os registros que correspondem ao filtro
+        # Usar o período original do banco de dados
+        periodo_original = registro_exemplo['Período']
+        
+        # Excluir do MongoDB
         resultado = collection.delete_many(filtro)
         
         if resultado.deleted_count > 0:
-            return True, f"{resultado.deleted_count} registro(s) excluído(s) com sucesso"
+            # Se a exclusão do MongoDB foi bem-sucedida, tentar excluir do SharePoint
+            try:
+                # Gerar nome do arquivo baseado nos dados (USANDO A MESMA LÓGICA DA CRIAÇÃO)
+                if origem == 'SUPRIMENTOS':
+                    # Usar a mesma formatação da página SUPRIMENTOS
+                    nome_fornecedor = "".join(x for x in fornecedor.replace(' ', '_') if x.isalnum() or x in ['_', '-'])
+                    
+                    # CORREÇÃO: Converter período do formato do banco (30/11/2025) para formato do arquivo (NOV-25)
+                    # Dicionário para conversão de mês
+                    meses_abrev = {
+                        '01': 'JAN', '02': 'FEV', '03': 'MAR', '04': 'ABR',
+                        '05': 'MAI', '06': 'JUN', '07': 'JUL', '08': 'AGO',
+                        '09': 'SET', '10': 'OUT', '11': 'NOV', '12': 'DEZ'
+                    }
+                    
+                    # Extrair mês e ano do período do banco (formato: DD/MM/YYYY)
+                    partes_data = periodo_original.split('/')
+                    mes_num = partes_data[1]  # MM
+                    ano_abrev = partes_data[2][-2:]  # YY (últimos 2 dígitos)
+                    
+                    # Converter para formato do arquivo: MES-YY
+                    nome_periodo = f"{meses_abrev[mes_num]}-{ano_abrev}"
+                    
+                    nome_unidade = "".join(x for x in unidade if x.isalnum() or x in ['_', '-'])
+                else:
+                    # Para ADMINISTRAÇÃO, usar formatação mais simples
+                    nome_fornecedor = fornecedor.replace(' ', '_')
+                    nome_periodo = periodo_original.replace('/', '-')
+                    nome_unidade = unidade
+                
+                nome_arquivo = f'{nome_fornecedor}_{nome_periodo}_{nome_unidade}{sufixo_arquivo}.xlsx'
+                
+                # Tentar excluir do SharePoint
+                sp = SharePoint()
+                sucesso_sp, mensagem_sp = sp.delete_file(nome_arquivo, sharepoint_folder)
+                
+                if sucesso_sp:
+                    return True, f"{resultado.deleted_count} registro(s) excluído(s) do MongoDB e arquivo '{nome_arquivo}' excluído do SharePoint com sucesso"
+                else:
+                    return True, f"{resultado.deleted_count} registro(s) excluído(s) do MongoDB com sucesso. Aviso: {mensagem_sp}"
+                    
+            except Exception as e:
+                return True, f"{resultado.deleted_count} registro(s) excluído(s) do MongoDB com sucesso. Erro ao excluir do SharePoint: {str(e)}"
         else:
-            return False, "Nenhum registro foi excluído"
+            return False, "Nenhum registro foi excluído do MongoDB"
             
     except Exception as e:
-        return False, f"Erro ao excluir do MongoDB: {str(e)}"
+        return False, f"Erro ao excluir: {str(e)}"
 
 # Função para excluir TODAS as avaliações de uma coleção específica
 def excluir_todas_avaliacoes_colecao(nome_colecao):
@@ -219,14 +269,49 @@ def excluir_todas_avaliacoes_colecao(nome_colecao):
         if total_registros == 0:
             return False, f"A coleção '{nome_colecao}' já está vazia"
         
+        # Determinar pasta do SharePoint baseada na coleção
+        if nome_colecao == "avaliacoes":
+            sharepoint_folder = "Avaliacao_Fornecedores/SUP"
+        elif nome_colecao == "avaliacoes_adm":
+            sharepoint_folder = "Avaliacao_Fornecedores/ADM"
+        else:
+            sharepoint_folder = None
+        
         # Excluir todos os registros da coleção
         resultado = collection.delete_many({})
         
-        if resultado.deleted_count > 0:
-            return True, f"{resultado.deleted_count} registro(s) excluído(s) da coleção '{nome_colecao}'"
-        else:
-            return False, "Nenhum registro foi excluído"
-            
+        mensagem_mongodb = f"{resultado.deleted_count} registros excluídos da coleção '{nome_colecao}'"
+        
+        # Tentar excluir arquivos do SharePoint se a pasta foi identificada
+        if sharepoint_folder:
+            try:
+                sp = SharePoint()
+                files_list = sp._get_files_list(sharepoint_folder)
+                
+                arquivos_excluidos = 0
+                erros_sharepoint = []
+                
+                for file in files_list:
+                    try:
+                        sucesso_sp, _ = sp.delete_file(file.name, sharepoint_folder)
+                        if sucesso_sp:
+                            arquivos_excluidos += 1
+                        else:
+                            erros_sharepoint.append(file.name)
+                    except Exception as e:
+                        erros_sharepoint.append(f"{file.name}: {str(e)}")
+                
+                if arquivos_excluidos > 0:
+                    mensagem_mongodb += f" e {arquivos_excluidos} arquivos excluídos do SharePoint"
+                
+                if erros_sharepoint:
+                    mensagem_mongodb += f". Erros no SharePoint: {len(erros_sharepoint)} arquivos não puderam ser excluídos"
+                    
+            except Exception as e:
+                mensagem_mongodb += f". Erro ao acessar SharePoint: {str(e)}"
+        
+        return True, mensagem_mongodb
+        
     except Exception as e:
         return False, f"Erro ao excluir da coleção '{nome_colecao}': {str(e)}"
 
