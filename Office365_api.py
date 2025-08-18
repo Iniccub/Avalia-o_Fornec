@@ -12,11 +12,11 @@ load_dotenv()
 # Tenta obter as credenciais do st.secrets (Streamlit Cloud) ou do .env (ambiente local)
 try:
     # Tenta usar st.secrets (Streamlit Cloud)
-    username = st.secrets["sharepoint"]["sharepoint_email"]
-    password = st.secrets["sharepoint"]["sharepoint_password"]
-    sharepoint_site = st.secrets["sharepoint"]["sharepoint_url_site"]
-    sharepoint_site_name = st.secrets["sharepoint"]["sharepoint_site_name"]
-    sharepoint_doc = st.secrets["sharepoint"]["sharepoint_doc_library"]
+    username = "felipe@redelius.com.br"
+    password = "FasterDominusKey21*#"
+    sharepoint_site = "https://csasic.sharepoint.com/sites/DadosControladoria"
+    sharepoint_site_name = sharepoint_site_name = "DadosControladoria"
+    sharepoint_doc = "Documentos Partilhados"
 except (KeyError, AttributeError):
     # Fallback para variáveis de ambiente locais (.env)
     username = os.getenv("sharepoint_email")
@@ -56,4 +56,15 @@ class SharePoint:
         target_folder = conn.web.get_folder_by_server_relative_path(target_folder_url)
         response = target_folder.upload_file(file_name, content).execute_query()
         return response
+
+    def delete_file(self, file_name, folder_name):
+        """Exclui um arquivo do SharePoint"""
+        try:
+            conn = self._auth()
+            file_url = f'/sites/{sharepoint_site_name}/{sharepoint_doc}/{folder_name}/{file_name}'
+            file = conn.web.get_file_by_server_relative_url(file_url)
+            file.delete_object().execute_query()
+            return True, f"Arquivo {file_name} excluído com sucesso do SharePoint"
+        except Exception as e:
+            return False, f"Erro ao excluir arquivo do SharePoint: {str(e)}"
                 
