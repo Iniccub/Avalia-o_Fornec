@@ -142,11 +142,13 @@ periodo = st.sidebar.selectbox('Selecione o período avaliado', index=indice_mes
 
 # Filtrar fornecedores baseado na unidade selecionada
 if unidade:
-    # Obter fornecedores que atendem a unidade selecionada
     fornecedores_filtrados = [
         fornecedor for fornecedor, unidades in fornecedores_por_unidade.items()
         if unidade in unidades
     ]
+    # Ordenar fornecedores em ordem alfabética
+    fornecedores_filtrados.sort()
+    
     fornecedor = st.sidebar.selectbox('Selecione o fornecedor a ser avaliado', 
                                      index=None, 
                                      options=fornecedores_filtrados, 
