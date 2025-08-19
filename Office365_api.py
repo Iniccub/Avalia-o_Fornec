@@ -1,29 +1,15 @@
 
-import os
-import streamlit as st  # Adicione esta linha para importar o streamlit
-from dotenv import load_dotenv
+import streamlit as st
 from office365.sharepoint.client_context import ClientContext
 from office365.runtime.auth.user_credential import UserCredential
 from office365.sharepoint.files.file import File
 
-# Carrega variáveis do arquivo .env
-load_dotenv()
-
-# Tenta obter as credenciais do st.secrets (Streamlit Cloud) ou do .env (ambiente local)
-try:
-    # Tenta usar st.secrets (Streamlit Cloud)
-    username = st.secrets["sharepoint_email"]
-    password = st.secrets["sharepoint_password"]
-    sharepoint_site = st.secrets["sharepoint_url_site"]
-    sharepoint_site_name = st.secrets["sharepoint_site_name"]
-    sharepoint_doc = st.secrets["sharepoint_doc_library"]
-except (KeyError, AttributeError):
-    # Fallback para variáveis de ambiente locais (.env)
-    username = os.getenv("sharepoint_email")
-    password = os.getenv("sharepoint_password")
-    sharepoint_site = os.getenv("sharepoint_url_site")
-    sharepoint_site_name = os.getenv("sharepoint_site_name")
-    sharepoint_doc = os.getenv("sharepoint_doc_library")
+# Obtém as credenciais do st.secrets
+username = st.secrets["sharepoint_email"]
+password = st.secrets["sharepoint_password"]
+sharepoint_site = st.secrets["sharepoint_url_site"]
+sharepoint_site_name = st.secrets["sharepoint_site_name"]
+sharepoint_doc = st.secrets["sharepoint_doc_library"]
 
 
 class SharePoint:
