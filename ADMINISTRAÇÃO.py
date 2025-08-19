@@ -167,6 +167,9 @@ if unidade:
         fornecedor for fornecedor, unidades in fornecedores_por_unidade.items()
         if unidade in unidades
     ]
+    # Ordenar fornecedores em ordem alfabética
+    fornecedores_filtrados.sort()
+    
     fornecedor = st.sidebar.selectbox('Selecione o fornecedor a ser avaliado', 
                                      index=None, 
                                      options=fornecedores_filtrados, 
@@ -229,7 +232,6 @@ st.write('---')
 # Subtitulo
 if fornecedor and unidade and periodo:
     st.subheader(f'Contratada/Fornecedor: {fornecedor}')
-    st.write('Vigência: 02/01/2025 a 31/12/2025')
     st.write(f'Unidade: {unidade}')
     st.write(f'Período avaliado: {periodo}')
     st.write('---')
