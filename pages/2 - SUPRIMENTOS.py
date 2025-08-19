@@ -214,7 +214,6 @@ st.write('---')
 # Subtitulo
 if fornecedor and unidade and periodo:
     st.subheader(f'Contratada/Fornecedor: {fornecedor}')
-    st.write('Vigência: 02/01/2025 a 31/12/2025')
     st.write(f'Unidade: {unidade}')
     st.write(f'Período avaliado: {periodo}')
     st.write('---')
