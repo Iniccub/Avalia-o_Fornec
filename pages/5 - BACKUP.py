@@ -5,6 +5,7 @@ import os
 import json
 import datetime
 import pandas as pd
+import time
 from io import StringIO, BytesIO
 
 # Adicionar importações necessárias para a nova funcionalidade
@@ -177,6 +178,134 @@ def upload_para_sharepoint(nome_arquivo, origem, arquivo_bytes):
     except Exception as e:
         return False, f"Erro no upload: {str(e)}"
 
+# Novas funções para verificação de arquivos
+# Adicionar cache global no início do arquivo (após os imports)
+if 'sharepoint_cache' not in st.session_state:
+    st.session_state.sharepoint_cache = {}
+    st.session_state.cache_timestamp = None
+
+def verificar_arquivos_sharepoint_batch(avaliacoes_df):
+    """
+    Verifica todos os arquivos de uma vez só, muito mais eficiente
+    """
+    try:
+        # Verificar se o cache ainda é válido (5 minutos)
+        import time
+        current_time = time.time()
+        cache_valid = (st.session_state.cache_timestamp and 
+                      current_time - st.session_state.cache_timestamp < 300)
+        
+        if cache_valid:
+            # Usar cache existente
+            status_arquivos = []
+            for _, row in avaliacoes_df.iterrows():
+                nome_arquivo = gerar_nome_arquivo_avaliacao(
+                    row['Fornecedor'], row['Período'], row['Unidade'], row['Origem']
+                )
+                cache_key = f"{row['Origem']}_{nome_arquivo}"
+                status = st.session_state.sharepoint_cache.get(cache_key, False)
+                status_arquivos.append("✅ Existe" if status else "❌ Não existe")
+            return status_arquivos
+        
+        # Limpar cache e fazer nova verificação
+        st.session_state.sharepoint_cache = {}
+        sharepoint = SharePoint()
+        
+        # Buscar arquivos de ambas as pastas de uma vez
+        arquivos_sup = set()
+        arquivos_adm = set()
+        
+        try:
+            files_sup = sharepoint._get_files_list("Avaliacao_Fornecedores/SUP")
+            arquivos_sup = {arquivo.name for arquivo in files_sup}
+        except:
+            pass
+            
+        try:
+            files_adm = sharepoint._get_files_list("Avaliacao_Fornecedores/ADM")
+            arquivos_adm = {arquivo.name for arquivo in files_adm}
+        except:
+            pass
+        
+        # Verificar cada avaliação contra os arquivos encontrados
+        status_arquivos = []
+        for _, row in avaliacoes_df.iterrows():
+            nome_arquivo = gerar_nome_arquivo_avaliacao(
+                row['Fornecedor'], row['Período'], row['Unidade'], row['Origem']
+            )
+            
+            if row['Origem'] == 'SUPRIMENTOS':
+                existe = nome_arquivo in arquivos_sup
+            else:
+                existe = nome_arquivo in arquivos_adm
+            
+            # Salvar no cache
+            cache_key = f"{row['Origem']}_{nome_arquivo}"
+            st.session_state.sharepoint_cache[cache_key] = existe
+            
+            status_arquivos.append("✅ Existe" if existe else "❌ Não existe")
+        
+        # Atualizar timestamp do cache
+        st.session_state.cache_timestamp = current_time
+        return status_arquivos
+        
+    except Exception as e:
+        st.error(f"Erro ao verificar arquivos: {str(e)}")
+        # Retornar status padrão em caso de erro
+        return ["❓ Erro na verificação"] * len(avaliacoes_df)
+
+def verificar_arquivo_existe_sharepoint(nome_arquivo, origem):
+    """
+    Versão otimizada para verificações individuais usando cache
+    """
+    cache_key = f"{origem}_{nome_arquivo}"
+    
+    # Verificar cache primeiro
+    if cache_key in st.session_state.sharepoint_cache:
+        return st.session_state.sharepoint_cache[cache_key]
+    
+    # Se não estiver no cache, fazer verificação individual
+    try:
+        sharepoint = SharePoint()
+        pasta = "Avaliacao_Fornecedores/SUP" if origem == "SUPRIMENTOS" else "Avaliacao_Fornecedores/ADM"
+        
+        arquivos = sharepoint._get_files_list(pasta)
+        existe = any(arquivo.name == nome_arquivo for arquivo in arquivos)
+        
+        # Salvar no cache
+        st.session_state.sharepoint_cache[cache_key] = existe
+        return existe
+    except:
+        return False
+
+def gerar_nome_arquivo_avaliacao(fornecedor, periodo, unidade, origem):
+    """
+    Gera o nome do arquivo baseado nos dados da avaliação
+    """
+    nome_fornecedor = "".join(x for x in fornecedor.replace(' ', '_') if x.isalnum() or x in ['_', '-'])
+    
+    # Converter período do formato DD/MM/YYYY para MES-YY
+    partes_data = periodo.split('/')
+    mes_num = partes_data[1]  # MM
+    ano_abrev = partes_data[2][-2:]  # YY (últimos 2 dígitos)
+    
+    # Dicionário para conversão de mês
+    meses_abrev = {
+        '01': 'JAN', '02': 'FEV', '03': 'MAR', '04': 'ABR',
+        '05': 'MAI', '06': 'JUN', '07': 'JUL', '08': 'AGO',
+        '09': 'SET', '10': 'OUT', '11': 'NOV', '12': 'DEZ'
+    }
+    nome_periodo = f"{meses_abrev[mes_num]}-{ano_abrev}"
+    
+    nome_unidade = "".join(x for x in unidade if x.isalnum() or x in ['_', '-'])
+    
+    if origem == 'SUPRIMENTOS':
+        nome_arquivo = f'{nome_fornecedor}_{nome_periodo}_{nome_unidade}_SUP.xlsx'
+    else:
+        nome_arquivo = f'{nome_fornecedor}_{nome_periodo}_{nome_unidade}.xlsx'
+    
+    return nome_arquivo
+
 # Criar as abas da interface
 tabs = st.tabs(["Backup", "Restauração", "Importação de Dados Locais", "Recuperação de Arquivos"])
 
@@ -249,7 +378,7 @@ with tabs[1]:
                         st.success("Backup restaurado com sucesso!")
                     else:
                         st.error("Ocorreram erros durante a restauração do backup.")
-        
+
         except Exception as e:
             st.error(f"Erro ao processar o arquivo de backup: {str(e)}")
 
@@ -265,13 +394,6 @@ with tabs[2]:
                 st.success("Dados locais importados com sucesso!")
             else:
                 st.error("Ocorreram erros durante a importação dos dados locais.")
-
-# Rodapé
-st.markdown("""---
-<div style='text-align: center; color: gray; font-size: 12px;'>
-    © 2024 Sistema Integrado de Colégios - Todos os direitos reservados
-</div>
-""", unsafe_allow_html=True)
 
 # Nova aba de Recuperação de Arquivos
 with tabs[3]:
@@ -291,11 +413,12 @@ with tabs[3]:
             subset=['Fornecedor', 'Unidade', 'Período', 'Origem']
         )[['Fornecedor', 'Unidade', 'Período', 'Data_Avaliacao', 'Origem']].copy()
         
-        # Ordenar por data mais recente
-        if 'Data_Avaliacao' in avaliacoes_unicas.columns:
-            avaliacoes_unicas = avaliacoes_unicas.sort_values('Data_Avaliacao', ascending=False)
-        
-        st.subheader(f"📊 Avaliações Disponíveis ({len(avaliacoes_unicas)} encontradas)")
+        # Substituir a seção de verificação (linhas 338-350)
+        with st.spinner("Verificando arquivos no SharePoint (otimizado)..."):
+            # Usar verificação em lote - muito mais rápida
+            status_arquivos = verificar_arquivos_sharepoint_batch(avaliacoes_unicas)
+            
+        avaliacoes_unicas['Status_Arquivo'] = status_arquivos
         
         # Filtros para seleção
         col1, col2, col3, col4 = st.columns(4)
@@ -331,11 +454,37 @@ with tabs[3]:
         if origem_filtro != 'Todas':
             df_filtrado = df_filtrado[df_filtrado['Origem'] == origem_filtro]
         
-        # Mostrar avaliações filtradas
+        # Mostrar avaliações filtradas com formatação condicional
         if df_filtrado.empty:
             st.warning("Nenhuma avaliação encontrada com os filtros aplicados.")
         else:
-            st.dataframe(df_filtrado, use_container_width=True)
+            # Criar DataFrame para exibição com cores
+            def highlight_missing_files(row):
+                if row['Status_Arquivo'] == "❌ Não existe":
+                    return ['background-color: #ffcccc'] * len(row)  # Vermelho claro
+                else:
+                    return [''] * len(row)
+            
+            # Aplicar formatação condicional
+            df_styled = df_filtrado.style.apply(highlight_missing_files, axis=1)
+            
+            st.dataframe(df_styled, use_container_width=True)
+            
+            # Mostrar estatísticas
+            total_avaliacoes = len(df_filtrado)
+            arquivos_existentes = len(df_filtrado[df_filtrado['Status_Arquivo'] == "✅ Existe"])
+            arquivos_faltando = total_avaliacoes - arquivos_existentes
+            
+            col_stat1, col_stat2, col_stat3 = st.columns(3)
+            with col_stat1:
+                st.metric("Total de Avaliações", total_avaliacoes)
+            with col_stat2:
+                st.metric("Arquivos Existentes", arquivos_existentes)
+            with col_stat3:
+                st.metric("Arquivos Faltando", arquivos_faltando)
+            
+            if arquivos_faltando > 0:
+                st.warning(f"⚠️ {arquivos_faltando} avaliação(ões) não possui(em) arquivo correspondente no SharePoint (destacadas em vermelho).")
             
             # Seleção da avaliação para recuperação
             st.subheader("🔄 Selecionar Avaliação para Recuperação")
@@ -371,12 +520,6 @@ with tabs[3]:
                     with st.spinner("Processando recuperação do arquivo..."):
                         try:
                             # Buscar dados completos da avaliação
-                            filtro_avaliacao = {
-                                'Fornecedor': avaliacao_info['Fornecedor'],
-                                'Unidade': avaliacao_info['Unidade'],
-                                'Período': avaliacao_info['Período']
-                            }
-                            
                             dados_completos = todas_avaliacoes[
                                 (todas_avaliacoes['Fornecedor'] == avaliacao_info['Fornecedor']) &
                                 (todas_avaliacoes['Unidade'] == avaliacao_info['Unidade']) &
@@ -388,27 +531,12 @@ with tabs[3]:
                                 st.error("Erro: Dados da avaliação não encontrados.")
                             else:
                                 # Gerar nome do arquivo
-                                nome_fornecedor = "".join(x for x in avaliacao_info['Fornecedor'].replace(' ', '_') if x.isalnum() or x in ['_', '-'])
-                                
-                                # Converter período do formato DD/MM/YYYY para MES-YY
-                                partes_data = avaliacao_info['Período'].split('/')
-                                mes_num = partes_data[1]  # MM
-                                ano_abrev = partes_data[2][-2:]  # YY (últimos 2 dígitos)
-                                
-                                # Dicionário para conversão de mês (adicionar no início do arquivo se não existir)
-                                meses_abrev = {
-                                    '01': 'JAN', '02': 'FEV', '03': 'MAR', '04': 'ABR',
-                                    '05': 'MAI', '06': 'JUN', '07': 'JUL', '08': 'AGO',
-                                    '09': 'SET', '10': 'OUT', '11': 'NOV', '12': 'DEZ'
-                                }
-                                nome_periodo = f"{meses_abrev[mes_num]}-{ano_abrev}"
-                                
-                                nome_unidade = "".join(x for x in avaliacao_info['Unidade'] if x.isalnum() or x in ['_', '-'])
-                                
-                                if avaliacao_info['Origem'] == 'SUPRIMENTOS':
-                                    nome_arquivo = f'{nome_fornecedor}_{nome_periodo}_{nome_unidade}_SUP.xlsx'
-                                else:
-                                    nome_arquivo = f'{nome_fornecedor}_{nome_periodo}_{nome_unidade}.xlsx'
+                                nome_arquivo = gerar_nome_arquivo_avaliacao(
+                                    avaliacao_info['Fornecedor'],
+                                    avaliacao_info['Período'],
+                                    avaliacao_info['Unidade'],
+                                    avaliacao_info['Origem']
+                                )
                                 
                                 # Gerar arquivo Excel
                                 arquivo_excel = gerar_excel_recuperacao(dados_completos.to_dict('records'), avaliacao_info['Origem'])
@@ -450,3 +578,20 @@ with tabs[3]:
                         
                         except Exception as e:
                             st.error(f"Erro durante o processo de recuperação: {str(e)}")
+
+# Adicionar após st.subheader(f"📊 Avaliações Disponíveis...")
+col_refresh, col_info = st.columns([1, 4])
+with col_refresh:
+    if st.button("🔄 Atualizar Cache", help="Força uma nova verificação no SharePoint"):
+        st.session_state.sharepoint_cache = {}
+        st.session_state.cache_timestamp = None
+        st.rerun()
+    
+    with col_info:
+        cache_info = f"Cache: {len(st.session_state.sharepoint_cache)} arquivos" if st.session_state.sharepoint_cache else "Cache vazio"
+        st.caption(cache_info)
+st.markdown("""---
+<div style='text-align: center; color: gray; font-size: 12px;'>
+    © 2024 Sistema Integrado de Colégios - Todos os direitos reservados
+</div>
+""", unsafe_allow_html=True)
