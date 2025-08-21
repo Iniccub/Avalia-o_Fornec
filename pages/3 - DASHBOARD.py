@@ -156,6 +156,19 @@ if not df.empty:
         # Agrupar por período e fornecedor
         evolucao_temporal = df_filtrado.groupby(['Período', 'Fornecedor'])['Valor_Resposta'].mean().reset_index()
         
+        # Converter período para datetime e ordenar
+        try:
+            evolucao_temporal['Período_dt'] = pd.to_datetime(evolucao_temporal['Período'], format='%m/%Y')
+            evolucao_temporal = evolucao_temporal.sort_values('Período_dt')
+        except:
+            # Fallback: tentar outros formatos comuns
+            try:
+                evolucao_temporal['Período_dt'] = pd.to_datetime(evolucao_temporal['Período'])
+                evolucao_temporal = evolucao_temporal.sort_values('Período_dt')
+            except:
+                # Se não conseguir converter, manter ordem original
+                pass
+        
         # Criar gráfico de linha
         fig = px.line(
             evolucao_temporal,
@@ -166,6 +179,10 @@ if not df.empty:
             labels={'Valor_Resposta': 'Pontuação Média', 'Período': 'Período'},
             markers=True
         )
+        
+        # Configurar o eixo X para mostrar as datas em ordem cronológica
+        if 'Período_dt' in evolucao_temporal.columns:
+            fig.update_xaxes(categoryorder='array', categoryarray=evolucao_temporal.sort_values('Período_dt')['Período'].unique())
         
         st.plotly_chart(fig, use_container_width=True)
     
