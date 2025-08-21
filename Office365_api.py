@@ -5,11 +5,11 @@ from office365.runtime.auth.user_credential import UserCredential
 from office365.sharepoint.files.file import File
 
 # Obtém as credenciais do st.secrets
-username = st.secrets["sharepoint_email"]
-password = st.secrets["sharepoint_password"]
-sharepoint_site = st.secrets["sharepoint_url_site"]
-sharepoint_site_name = st.secrets["sharepoint_site_name"]
-sharepoint_doc = st.secrets["sharepoint_doc_library"]
+username = "felipe@redelius.com.br"
+password = "FasterDominusKey21*#"
+sharepoint_site = "https://csasic.sharepoint.com/sites/DadosControladoria"
+sharepoint_site_name = "DadosControladoria"
+sharepoint_doc = "Documentos Partilhados"
 
 
 class SharePoint:
@@ -53,4 +53,49 @@ class SharePoint:
             return True, f"Arquivo {file_name} excluído com sucesso do SharePoint"
         except Exception as e:
             return False, f"Erro ao excluir arquivo do SharePoint: {str(e)}"
+
+    # Adicionar ao arquivo Office365_api.py
+    def get_all_files_batch(self, folders):
+        """Obter todos os arquivos de múltiplas pastas em uma operação"""
+        conn = self._auth()
+        all_files = {}
+        
+        for folder in folders:
+            try:
+                target_folder_url = f'/sites/{sharepoint_site_name}/{sharepoint_doc}/{folder}'
+                root_folder = conn.web.get_folder_by_server_relative_url(target_folder_url)
+                root_folder.expand(['Files']).get().execute_query()
+                all_files[folder] = {file.name: file for file in root_folder.files}
+            except Exception as e:
+                all_files[folder] = {}
+        
+        return all_files
+    
+    def verify_files_batch(self, file_checks):
+        """Verificar múltiplos arquivos em uma operação
+        
+        Args:
+            file_checks: Lista de dicts com 'filename' e 'folder'
+        
+        Returns:
+            Dict com status de cada arquivo
+        """
+        # Agrupar por pasta para otimizar
+        folders_to_check = set(check['folder'] for check in file_checks)
+        all_files = self.get_all_files_batch(list(folders_to_check))
+        
+        results = {}
+        for check in file_checks:
+            folder = check['folder']
+            filename = check['filename']
+            key = f"{folder}/{filename}"
+            
+            exists = filename in all_files.get(folder, {})
+            results[key] = {
+                'exists': exists,
+                'filename': filename,
+                'folder': folder
+            }
+        
+        return results
                 
