@@ -10,6 +10,7 @@ from io import StringIO, BytesIO
 
 # Adicionar importações necessárias para a nova funcionalidade
 from Office365_api import SharePoint
+from sharepoint_cache import cache
 
 # Função para importar módulos dinamicamente
 def import_module(module_name, file_path):
@@ -682,3 +683,31 @@ st.markdown("""---
     © 2024 Sistema Integrado de Colégios - Todos os direitos reservados
 </div>
 """, unsafe_allow_html=True)
+
+# Modificar seção de verificação
+if 'verificacao_sharepoint_ativa' not in st.session_state:
+    st.session_state.verificacao_sharepoint_ativa = False
+
+# Interface de controle
+col1, col2, col3 = st.columns([2, 1, 1])
+
+with col1:
+    if st.button("🔍 Verificar Arquivos SharePoint", type="primary"):
+        st.session_state.verificacao_sharepoint_ativa = True
+        st.rerun()
+
+with col2:
+    if st.button("🗑️ Limpar Cache"):
+        cache.clear_expired()
+        st.success("Cache limpo!")
+
+with col3:
+    stats = cache.get_stats()
+    st.metric("Itens em Cache", stats['total_items'])
+
+# Só executar verificação se solicitado
+if st.session_state.verificacao_sharepoint_ativa:
+    # ... código de verificação existente ...
+    pass
+else:
+    st.info("👆 Clique em 'Verificar Arquivos SharePoint' para iniciar a verificação")
