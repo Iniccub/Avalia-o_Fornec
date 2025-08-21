@@ -413,31 +413,25 @@ with tabs[3]:
             subset=['Fornecedor', 'Unidade', 'Período', 'Origem']
         )[['Fornecedor', 'Unidade', 'Período', 'Data_Avaliacao', 'Origem']].copy()
         
-        # Substituir a seção de verificação (linhas 338-350)
-        with st.spinner("Verificando arquivos no SharePoint (otimizado)..."):
-            # Usar verificação em lote - muito mais rápida
-            status_arquivos = verificar_arquivos_sharepoint_batch(avaliacoes_unicas)
-            
-        avaliacoes_unicas['Status_Arquivo'] = status_arquivos
-        
-        # Filtros para seleção
+        # SEÇÃO DE FILTRAGEM
+        st.subheader("🔍 Filtros")
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            fornecedores_disponiveis = ['Todos'] + sorted(avaliacoes_unicas['Fornecedor'].unique().tolist())
-            fornecedor_filtro = st.selectbox("Fornecedor", fornecedores_disponiveis)
+            fornecedores_lista = ['Todos'] + sorted(avaliacoes_unicas['Fornecedor'].unique().tolist())
+            fornecedor_filtro = st.selectbox("Fornecedor", options=fornecedores_lista, key="rec_fornecedor")
         
         with col2:
-            unidades_disponiveis = ['Todas'] + sorted(avaliacoes_unicas['Unidade'].unique().tolist())
-            unidade_filtro = st.selectbox("Unidade", unidades_disponiveis)
+            unidades_lista = ['Todas'] + sorted(avaliacoes_unicas['Unidade'].unique().tolist())
+            unidade_filtro = st.selectbox("Unidade", options=unidades_lista, key="rec_unidade")
         
         with col3:
-            periodos_disponiveis = ['Todos'] + sorted(avaliacoes_unicas['Período'].unique().tolist())
-            periodo_filtro = st.selectbox("Período", periodos_disponiveis)
+            periodos_lista = ['Todos'] + sorted(avaliacoes_unicas['Período'].unique().tolist())
+            periodo_filtro = st.selectbox("Período", options=periodos_lista, key="rec_periodo")
         
         with col4:
-            origens_disponiveis = ['Todas'] + sorted(avaliacoes_unicas['Origem'].unique().tolist())
-            origem_filtro = st.selectbox("Origem", origens_disponiveis)
+            origens_lista = ['Todas', 'SUPRIMENTOS', 'ADMINISTRAÇÃO']
+            origem_filtro = st.selectbox("Origem", options=origens_lista, key="rec_origem")
         
         # Aplicar filtros
         df_filtrado = avaliacoes_unicas.copy()
@@ -454,142 +448,235 @@ with tabs[3]:
         if origem_filtro != 'Todas':
             df_filtrado = df_filtrado[df_filtrado['Origem'] == origem_filtro]
         
-        # Mostrar avaliações filtradas com formatação condicional
-        if df_filtrado.empty:
-            st.warning("Nenhuma avaliação encontrada com os filtros aplicados.")
-        else:
-            # Criar DataFrame para exibição com cores
-            def highlight_missing_files(row):
-                if row['Status_Arquivo'] == "❌ Não existe":
-                    return ['background-color: #ffcccc'] * len(row)  # Vermelho claro
-                else:
-                    return [''] * len(row)
-            
-            # Aplicar formatação condicional
-            df_styled = df_filtrado.style.apply(highlight_missing_files, axis=1)
-            
-            st.dataframe(df_styled, use_container_width=True)
-            
-            # Mostrar estatísticas
-            total_avaliacoes = len(df_filtrado)
-            arquivos_existentes = len(df_filtrado[df_filtrado['Status_Arquivo'] == "✅ Existe"])
-            arquivos_faltando = total_avaliacoes - arquivos_existentes
-            
-            col_stat1, col_stat2, col_stat3 = st.columns(3)
-            with col_stat1:
-                st.metric("Total de Avaliações", total_avaliacoes)
-            with col_stat2:
-                st.metric("Arquivos Existentes", arquivos_existentes)
-            with col_stat3:
-                st.metric("Arquivos Faltando", arquivos_faltando)
-            
-            if arquivos_faltando > 0:
-                st.warning(f"⚠️ {arquivos_faltando} avaliação(ões) não possui(em) arquivo correspondente no SharePoint (destacadas em vermelho).")
-            
-            # Seleção da avaliação para recuperação
-            st.subheader("🔄 Selecionar Avaliação para Recuperação")
-            
-            # Criar lista de opções para seleção
-            opcoes_avaliacao = []
-            for _, row in df_filtrado.iterrows():
-                opcao = f"{row['Fornecedor']} - {row['Unidade']} - {row['Período']} - {row['Origem']}"
-                opcoes_avaliacao.append(opcao)
-            
-            avaliacao_selecionada = st.selectbox(
-                "Escolha a avaliação para recuperar:",
-                options=opcoes_avaliacao,
-                index=None,
-                placeholder="Selecione uma avaliação..."
+        # BOTÃO PARA VERIFICAR STATUS DOS ARQUIVOS (MODIFICAÇÃO PRINCIPAL)
+        st.subheader("📋 Verificação de Arquivos no SharePoint")
+        
+        col_btn, col_info = st.columns([1, 3])
+        with col_btn:
+            verificar_arquivos = st.button(
+                "🔍 Verificar Arquivos no SharePoint", 
+                type="primary",
+                help="Clique para verificar quais arquivos existem no SharePoint"
             )
+        
+        with col_info:
+            if not df_filtrado.empty:
+                st.info(f"📊 **{len(df_filtrado)} avaliações** encontradas com os filtros aplicados")
+            else:
+                st.warning("Nenhuma avaliação encontrada com os filtros aplicados.")
+        
+        # Inicializar session state para controlar se a verificação foi feita
+        if 'verificacao_realizada' not in st.session_state:
+            st.session_state.verificacao_realizada = False
+            st.session_state.df_com_status = pd.DataFrame()
+        
+        # VERIFICAÇÃO CONDICIONAL - APENAS QUANDO BOTÃO FOR CLICADO
+        if verificar_arquivos and not df_filtrado.empty:
+            with st.spinner("🔄 Verificando arquivos no SharePoint... Isso pode levar alguns segundos."):
+                try:
+                    # Verificar status dos arquivos usando a função batch
+                    status_arquivos = verificar_arquivos_sharepoint_batch(df_filtrado)
+                    df_filtrado['Status_Arquivo'] = status_arquivos
+                    
+                    # Salvar resultado no session state
+                    st.session_state.df_com_status = df_filtrado.copy()
+                    st.session_state.verificacao_realizada = True
+                    
+                    st.success("✅ Verificação concluída com sucesso!")
+                    
+                except Exception as e:
+                    st.error(f"❌ Erro durante a verificação: {str(e)}")
+                    st.session_state.verificacao_realizada = False
+        
+        # EXIBIR RESULTADOS SE VERIFICAÇÃO FOI REALIZADA
+        if st.session_state.verificacao_realizada and not st.session_state.df_com_status.empty:
+            df_com_status = st.session_state.df_com_status
             
-            if avaliacao_selecionada:
-                # Extrair informações da avaliação selecionada
-                indice_selecionado = opcoes_avaliacao.index(avaliacao_selecionada)
-                avaliacao_info = df_filtrado.iloc[indice_selecionado]
+            # Filtrar novamente baseado nos filtros atuais (caso tenham mudado)
+            df_resultado = df_com_status.copy()
+            if fornecedor_filtro != 'Todos':
+                df_resultado = df_resultado[df_resultado['Fornecedor'] == fornecedor_filtro]
+            if unidade_filtro != 'Todas':
+                df_resultado = df_resultado[df_resultado['Unidade'] == unidade_filtro]
+            if periodo_filtro != 'Todos':
+                df_resultado = df_resultado[df_resultado['Período'] == periodo_filtro]
+            if origem_filtro != 'Todas':
+                df_resultado = df_resultado[df_resultado['Origem'] == origem_filtro]
+            
+            if not df_resultado.empty:
+                # Exibir métricas
+                total_avaliacoes = len(df_resultado)
+                arquivos_existentes = len(df_resultado[df_resultado['Status_Arquivo'] == "✅ Existe"])
+                arquivos_faltantes = total_avaliacoes - arquivos_existentes
                 
-                # Mostrar detalhes da avaliação selecionada
-                st.info(f"**Avaliação Selecionada:**\n"
-                       f"- **Fornecedor:** {avaliacao_info['Fornecedor']}\n"
-                       f"- **Unidade:** {avaliacao_info['Unidade']}\n"
-                       f"- **Período:** {avaliacao_info['Período']}\n"
-                       f"- **Origem:** {avaliacao_info['Origem']}\n"
-                       f"- **Data da Avaliação:** {avaliacao_info['Data_Avaliacao']}")
+                col_met1, col_met2, col_met3 = st.columns(3)
+                with col_met1:
+                    st.metric("Total de Avaliações", total_avaliacoes)
+                with col_met2:
+                    st.metric("Arquivos Existentes", arquivos_existentes)
+                with col_met3:
+                    st.metric("Arquivos Faltantes", arquivos_faltantes)
                 
-                # Botão para gerar e salvar arquivo
-                if st.button("🚀 Gerar e Salvar Arquivo Excel", type="primary"):
-                    with st.spinner("Processando recuperação do arquivo..."):
-                        try:
-                            # Buscar dados completos da avaliação
-                            dados_completos = todas_avaliacoes[
-                                (todas_avaliacoes['Fornecedor'] == avaliacao_info['Fornecedor']) &
-                                (todas_avaliacoes['Unidade'] == avaliacao_info['Unidade']) &
-                                (todas_avaliacoes['Período'] == avaliacao_info['Período']) &
-                                (todas_avaliacoes['Origem'] == avaliacao_info['Origem'])
-                            ]
-                            
-                            if dados_completos.empty:
-                                st.error("Erro: Dados da avaliação não encontrados.")
-                            else:
-                                # Gerar nome do arquivo
-                                nome_arquivo = gerar_nome_arquivo_avaliacao(
-                                    avaliacao_info['Fornecedor'],
-                                    avaliacao_info['Período'],
-                                    avaliacao_info['Unidade'],
-                                    avaliacao_info['Origem']
-                                )
-                                
-                                # Gerar arquivo Excel
-                                arquivo_excel = gerar_excel_recuperacao(dados_completos.to_dict('records'), avaliacao_info['Origem'])
-                                
-                                if arquivo_excel:
-                                    # Fazer upload para SharePoint
-                                    sucesso, mensagem = upload_para_sharepoint(
-                                        nome_arquivo, 
-                                        avaliacao_info['Origem'], 
-                                        arquivo_excel.getvalue()
-                                    )
-                                    
-                                    if sucesso:
-                                        st.success(f"✅ **Arquivo recuperado com sucesso!**\n"
-                                                  f"📁 **Arquivo:** {nome_arquivo}\n"
-                                                  f"📂 **Pasta:** Avaliacao_Fornecedores/{'SUP' if avaliacao_info['Origem'] == 'SUPRIMENTOS' else 'ADM'}\n"
-                                                  f"☁️ **Status:** Salvo no SharePoint")
-                                        
-                                        # Oferecer download local também
-                                        st.download_button(
-                                            label="💾 Baixar arquivo localmente (opcional)",
-                                            data=arquivo_excel.getvalue(),
-                                            file_name=nome_arquivo,
-                                            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                                        )
-                                    else:
-                                        st.error(f"❌ Erro ao salvar no SharePoint: {mensagem}")
-                                        
-                                        # Oferecer download local como alternativa
-                                        st.warning("💾 Download local disponível como alternativa:")
-                                        st.download_button(
-                                            label="Baixar arquivo Excel",
-                                            data=arquivo_excel.getvalue(),
-                                            file_name=nome_arquivo,
-                                            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                                        )
-                                else:
-                                    st.error("Erro ao gerar arquivo Excel.")
+                # Exibir tabela com status
+                st.dataframe(
+                    df_resultado[['Fornecedor', 'Unidade', 'Período', 'Origem', 'Status_Arquivo']],
+                    use_container_width=True
+                )
+                
+                if arquivos_faltantes > 0:
+                    st.warning(f"⚠️ **Atenção:** {arquivos_faltantes} arquivo(s) não encontrado(s) no SharePoint.")
+                else:
+                    st.success("🎉 **Excelente!** Todos os arquivos estão presentes no SharePoint.")
+                
+                # Filtrar apenas avaliações sem arquivo para recuperação
+                df_sem_arquivo = df_resultado[df_resultado['Status_Arquivo'] == "❌ Não existe"].copy()
+                
+                # SEÇÃO DE RECUPERAÇÃO - APENAS PARA ARQUIVOS FALTANTES
+                if df_sem_arquivo.empty:
+                    st.success("🎉 **Excelente!** Todas as avaliações filtradas já possuem arquivos no SharePoint.")
+                    st.info("💡 Não há arquivos para recuperar com os filtros atuais.")
+                else:
+                    st.subheader(f"🔄 Selecionar Avaliação para Recuperação ({len(df_sem_arquivo)} sem arquivo)")
+                    st.info(f"📋 Mostrando apenas avaliações que **não possuem** arquivo no SharePoint ({len(df_sem_arquivo)} de {len(df_resultado)} avaliações filtradas).")
+                    
+                    # Criar opções apenas para avaliações sem arquivo
+                    opcoes_avaliacao = []
+                    for _, row in df_sem_arquivo.iterrows():
+                        opcao = f"❌ {row['Fornecedor']} - {row['Unidade']} - {row['Período']} - {row['Origem']}"
+                        opcoes_avaliacao.append(opcao)
+                    
+                    avaliacao_selecionada = st.selectbox(
+                        "Escolha a avaliação para recuperar:",
+                        options=opcoes_avaliacao,
+                        index=None,
+                        placeholder="Selecione uma avaliação sem arquivo...",
+                        help="Apenas avaliações sem arquivo no SharePoint são mostradas aqui"
+                    )
+                    
+                    if avaliacao_selecionada:
+                        # Encontrar a avaliação selecionada no DataFrame filtrado
+                        indice_selecionado = opcoes_avaliacao.index(avaliacao_selecionada)
+                        avaliacao_info = df_sem_arquivo.iloc[indice_selecionado]
                         
-                        except Exception as e:
-                            st.error(f"Erro durante o processo de recuperação: {str(e)}")
+                        # Mostrar informações da avaliação selecionada
+                        st.info(f"**Avaliação Selecionada (SEM ARQUIVO):**\n"
+                               f"- **Fornecedor:** {avaliacao_info['Fornecedor']}\n"
+                               f"- **Unidade:** {avaliacao_info['Unidade']}\n"
+                               f"- **Período:** {avaliacao_info['Período']}\n"
+                               f"- **Origem:** {avaliacao_info['Origem']}\n"
+                               f"- **Data da Avaliação:** {avaliacao_info['Data_Avaliacao']}\n"
+                               f"- **Status:** ❌ Arquivo não existe no SharePoint")
+                        
+                        # Preview do nome do arquivo
+                        nome_arquivo_preview = gerar_nome_arquivo_avaliacao(
+                            avaliacao_info['Fornecedor'],
+                            avaliacao_info['Período'],
+                            avaliacao_info['Unidade'],
+                            avaliacao_info['Origem']
+                        )
+                        st.code(f"📁 Arquivo que será criado: {nome_arquivo_preview}", language="text")
+                        
+                        if st.button("🚀 Gerar e Salvar Arquivo Excel", type="primary"):
+                            with st.spinner("Processando recuperação do arquivo..."):
+                                try:
+                                    # Buscar dados completos da avaliação
+                                    dados_completos = todas_avaliacoes[
+                                        (todas_avaliacoes['Fornecedor'] == avaliacao_info['Fornecedor']) &
+                                        (todas_avaliacoes['Unidade'] == avaliacao_info['Unidade']) &
+                                        (todas_avaliacoes['Período'] == avaliacao_info['Período']) &
+                                        (todas_avaliacoes['Origem'] == avaliacao_info['Origem'])
+                                    ]
+                                    
+                                    if dados_completos.empty:
+                                        st.error("Erro: Dados da avaliação não encontrados.")
+                                    else:
+                                        # Gerar nome do arquivo
+                                        nome_arquivo = gerar_nome_arquivo_avaliacao(
+                                            avaliacao_info['Fornecedor'],
+                                            avaliacao_info['Período'],
+                                            avaliacao_info['Unidade'],
+                                            avaliacao_info['Origem']
+                                        )
+                                        
+                                        # Gerar arquivo Excel
+                                        arquivo_excel = gerar_excel_recuperacao(dados_completos.to_dict('records'), avaliacao_info['Origem'])
+                                        
+                                        if arquivo_excel:
+                                            # Tentar upload para SharePoint
+                                            sucesso, mensagem = upload_para_sharepoint(
+                                                nome_arquivo, 
+                                                avaliacao_info['Origem'], 
+                                                arquivo_excel.getvalue()
+                                            )
+                                            
+                                            if sucesso:
+                                                st.success(f"✅ **Arquivo recuperado com sucesso!**\n"
+                                                          f"📁 **Arquivo:** {nome_arquivo}\n"
+                                                          f"📂 **Pasta:** Avaliacao_Fornecedores/{'SUP' if avaliacao_info['Origem'] == 'SUPRIMENTOS' else 'ADM'}\n"
+                                                          f"☁️ **Status:** Salvo no SharePoint")
+                                                
+                                                # Limpar cache para forçar nova verificação
+                                                if 'sharepoint_cache' in st.session_state:
+                                                    cache_key = f"{avaliacao_info['Origem']}_{nome_arquivo}"
+                                                    st.session_state.sharepoint_cache[cache_key] = True
+                                                
+                                                # Limpar verificação para forçar nova consulta
+                                                st.session_state.verificacao_realizada = False
+                                                st.session_state.df_com_status = pd.DataFrame()
+                                                
+                                                # Opção de download local
+                                                st.download_button(
+                                                    label="💾 Baixar arquivo localmente (opcional)",
+                                                    data=arquivo_excel.getvalue(),
+                                                    file_name=nome_arquivo,
+                                                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                                                )
+                                                
+                                                # Sugerir nova verificação
+                                                st.info("💡 **Dica:** Clique em '🔍 Verificar Arquivos no SharePoint' novamente para ver a atualização do status.")
+                                                
+                                            else:
+                                                st.error(f"❌ Erro ao salvar no SharePoint: {mensagem}")
+                                                
+                                                # Fallback para download local
+                                                st.warning("💾 Download local disponível como alternativa:")
+                                                st.download_button(
+                                                    label="Baixar arquivo Excel",
+                                                    data=arquivo_excel.getvalue(),
+                                                    file_name=nome_arquivo,
+                                                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                                                )
+                                        else:
+                                            st.error("Erro ao gerar arquivo Excel.")
+                                
+                                except Exception as e:
+                                    st.error(f"Erro durante o processo de recuperação: {str(e)}")
+            else:
+                st.info("Nenhuma avaliação encontrada com os filtros aplicados após a verificação.")
+        
+        elif not st.session_state.verificacao_realizada:
+            st.info("🔍 **Clique no botão 'Verificar Arquivos no SharePoint' para ver o status dos arquivos e identificar quais precisam ser recuperados.**")
+            st.warning("⚠️ **Importante:** A verificação só será feita quando você clicar no botão, evitando consultas desnecessárias ao SharePoint.")
 
-# Adicionar após st.subheader(f"📊 Avaliações Disponíveis...")
+# Botões de controle do cache (fora da aba)
 col_refresh, col_info = st.columns([1, 4])
 with col_refresh:
-    if st.button("🔄 Atualizar Cache", help="Força uma nova verificação no SharePoint"):
-        st.session_state.sharepoint_cache = {}
-        st.session_state.cache_timestamp = None
+    if st.button("🔄 Limpar Cache", help="Limpa o cache e força nova verificação na próxima consulta"):
+        if 'sharepoint_cache' in st.session_state:
+            st.session_state.sharepoint_cache = {}
+        if 'cache_timestamp' in st.session_state:
+            st.session_state.cache_timestamp = None
+        if 'verificacao_realizada' in st.session_state:
+            st.session_state.verificacao_realizada = False
+        if 'df_com_status' in st.session_state:
+            st.session_state.df_com_status = pd.DataFrame()
+        st.success("Cache limpo com sucesso!")
         st.rerun()
-    
-    with col_info:
-        cache_info = f"Cache: {len(st.session_state.sharepoint_cache)} arquivos" if st.session_state.sharepoint_cache else "Cache vazio"
-        st.caption(cache_info)
+
+with col_info:
+    cache_info = f"Cache: {len(st.session_state.sharepoint_cache)} arquivos" if 'sharepoint_cache' in st.session_state and st.session_state.sharepoint_cache else "Cache vazio"
+    verificacao_info = "Verificação realizada" if st.session_state.get('verificacao_realizada', False) else "Verificação pendente"
+    st.caption(f"{cache_info} | {verificacao_info}")
 st.markdown("""---
 <div style='text-align: center; color: gray; font-size: 12px;'>
     © 2024 Sistema Integrado de Colégios - Todos os direitos reservados
