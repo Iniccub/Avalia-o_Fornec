@@ -64,11 +64,18 @@ class SharePointCache:
     
     def get_stats(self):
         """Estatísticas do cache"""
-        self._ensure_initialized()
-        return {
-            'total_items': len(st.session_state.sp_cache_data),
-            'cache_size_mb': len(str(st.session_state.sp_cache_data)) / 1024 / 1024
-        }
+        try:
+            self._ensure_initialized()
+            return {
+                'total_items': len(st.session_state.sp_cache_data),
+                'cache_size_mb': len(str(st.session_state.sp_cache_data)) / 1024 / 1024
+            }
+        except AttributeError:
+            # session_state ainda não está disponível
+            return {
+                'total_items': 0,
+                'cache_size_mb': 0.0
+            }
 
 # Instância global
 cache = SharePointCache()
